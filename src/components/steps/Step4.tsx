@@ -60,19 +60,16 @@ export default function Step4({ selected, previewUrl, back }: Step4Props) {
             </h3>
             
             {previewUrl ? (
-              <div className="w-full rounded-xl overflow-hidden shadow-lg border border-gray-200">
-                <img
-                  src={previewUrl}
-                  alt="Preview of uploaded image"
-                  className="w-full h-64 object-cover hover:scale-105 transition-transform duration-300"
-                />
-              </div>
+              <img
+                src={previewUrl}
+                alt="preview"
+                className="w-full h-48 object-cover rounded-xl border-2 border-blue-300"
+              />
             ) : (
               <div className="w-full h-48 bg-gradient-to-br from-blue-100 to-purple-100 rounded-xl border-2 border-dashed border-blue-300 flex items-center justify-center">
                 <div className="text-center">
                   <Image className="w-12 h-12 text-blue-400 mx-auto mb-3" />
-                  <p className="text-blue-600 font-medium">No image available</p>
-                  <p className="text-sm text-blue-500 mt-1">Please upload an image in Step 1</p>
+                  <p className="text-blue-600 font-medium">No preview available</p>
                 </div>
               </div>
             )}
