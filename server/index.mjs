@@ -30,11 +30,12 @@ app.post('/api/caption', upload.any(), async (req, res) => {
       messages: [
         {
           role: 'system',
-          content:
-            'You are a social-media copywriter. ' +
-            'Return **a JSON object** that looks like:\n',
-            '{ "captions": ["...", "...", "..."] }\n',
-            'Do not output anything except valid JSON.' },
+          content: `
+            You are a social-media copywriter.
+            Return a JSON object that looks like:
+            { "captions": ["...", "...", "..."] }
+            Do not output anything except valid JSON.
+          `.trim(),
         },
         {
           role: 'user',
