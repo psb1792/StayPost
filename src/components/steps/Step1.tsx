@@ -4,21 +4,39 @@ import { Upload, Image, X } from 'lucide-react';
 interface Step1Props {
   files: File[];
   setFiles: (files: File[]) => void;
+  setPreviewUrl: (url: string | null) => void;
   next: () => void;
 }
 
-export default function Step1({ files, setFiles, next }: Step1Props) {
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const fileList = event.target.files;
-    if (fileList) {
-      const filesArray = Array.from(fileList);
-      setFiles(filesArray);
+export default function Step1({ files, setFiles, setPreviewUrl, next }: Step1Props) {
+  const handleFiles = (fileList: FileList | null) => {
+    if (!fileList) return;
+    const arr = Array.from(fileList);
+    setFiles(arr);
+
+    if (arr.length > 0) {
+      const url = URL.createObjectURL(arr[0]);
+      setPreviewUrl(url);
+    } else {
+      setPreviewUrl(null);
     }
+  };
+
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    handleFiles(event.target.files);
   };
 
   const removeFile = (indexToRemove: number) => {
     const updatedFiles = files.filter((_, index) => index !== indexToRemove);
     setFiles(updatedFiles);
+    
+    // Update preview URL
+    if (updatedFiles.length > 0) {
+      const url = URL.createObjectURL(updatedFiles[0]);
+      setPreviewUrl(url);
+    } else {
+      setPreviewUrl(null);
+    }
   };
 
   const formatFileSize = (bytes: number) => {

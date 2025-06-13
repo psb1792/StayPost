@@ -24,21 +24,6 @@ export default function StepWizard({ className = '' }: StepWizardProps) {
   const next = () => setStep((s) => Math.min(s + 1, 3));
   const back = () => setStep((s) => Math.max(s - 1, 0));
 
-  // Create preview URL when files change
-  useEffect(() => {
-    if (files.length > 0) {
-      const url = URL.createObjectURL(files[0]);
-      setPreviewUrl(url);
-      
-      // Cleanup function to revoke the URL when component unmounts or files change
-      return () => {
-        URL.revokeObjectURL(url);
-      };
-    } else {
-      setPreviewUrl(null);
-    }
-  }, [files]);
-
   const stepTitles = [
     'Upload Files',
     'Add Captions',
@@ -47,10 +32,21 @@ export default function StepWizard({ className = '' }: StepWizardProps) {
   ];
 
   const steps = [
-    <Step1 files={files} setFiles={setFiles} next={next} key={0} />,
+    <Step1 
+      files={files} 
+      setFiles={setFiles} 
+      setPreviewUrl={setPreviewUrl} 
+      next={next} 
+      key={0} 
+    />,
     <Step2 files={files} captions={captions} setCaptions={setCaptions} next={next} back={back} key={1} />,
     <Step3 captions={captions} selected={selected} setSelected={setSelected} next={next} back={back} key={2} />,
-    <Step4 selected={selected} previewUrl={previewUrl} back={back} key={3} />,
+    <Step4 
+      selected={selected} 
+      previewUrl={previewUrl} 
+      back={back} 
+      key={3} 
+    />,
   ];
 
   console.log('🪄 current step:', step);
