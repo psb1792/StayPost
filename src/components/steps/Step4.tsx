@@ -3,10 +3,11 @@ import { Check, Copy, Download, ArrowLeft, CheckCircle, Image } from 'lucide-rea
 
 interface Step4Props {
   selected: string | null;
+  previewUrl: string | null;
   back: () => void;
 }
 
-export default function Step4({ selected, back }: Step4Props) {
+export default function Step4({ selected, previewUrl, back }: Step4Props) {
   const [copied, setCopied] = useState(false);
 
   const copyToClipboard = async () => {
@@ -51,20 +52,30 @@ export default function Step4({ selected, back }: Step4Props) {
       {/* Content Preview Card */}
       <div className="bg-gradient-to-br from-green-50 to-blue-50 rounded-2xl border border-green-200 overflow-hidden shadow-lg">
         <div className="p-8">
-          {/* Image Preview Placeholder */}
+          {/* Image Preview */}
           <div className="mb-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
               <Image className="w-5 h-5 text-blue-500" />
               Image Preview
             </h3>
             
-            <div className="w-full h-48 bg-gradient-to-br from-blue-100 to-purple-100 rounded-xl border-2 border-dashed border-blue-300 flex items-center justify-center">
-              <div className="text-center">
-                <Image className="w-12 h-12 text-blue-400 mx-auto mb-3" />
-                <p className="text-blue-600 font-medium">First uploaded image preview</p>
-                <p className="text-sm text-blue-500 mt-1">Would display actual image here</p>
+            {previewUrl ? (
+              <div className="w-full rounded-xl overflow-hidden shadow-lg border border-gray-200">
+                <img
+                  src={previewUrl}
+                  alt="Preview of uploaded image"
+                  className="w-full h-64 object-cover hover:scale-105 transition-transform duration-300"
+                />
               </div>
-            </div>
+            ) : (
+              <div className="w-full h-48 bg-gradient-to-br from-blue-100 to-purple-100 rounded-xl border-2 border-dashed border-blue-300 flex items-center justify-center">
+                <div className="text-center">
+                  <Image className="w-12 h-12 text-blue-400 mx-auto mb-3" />
+                  <p className="text-blue-600 font-medium">No image available</p>
+                  <p className="text-sm text-blue-500 mt-1">Please upload an image in Step 1</p>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Selected Caption */}

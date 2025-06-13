@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ChevronLeft, ChevronRight, Check } from 'lucide-react';
 
 import Step1 from './steps/Step1';
@@ -19,9 +19,25 @@ export default function StepWizard({ className = '' }: StepWizardProps) {
   const [files, setFiles] = useState<File[]>([]);
   const [captions, setCaptions] = useState<string[]>([]);
   const [selected, setSelected] = useState<string | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
   const next = () => setStep((s) => Math.min(s + 1, 3));
   const back = () => setStep((s) => Math.max(s - 1, 0));
+
+  // Create preview URL when files change
+  useEffect(() => {
+    if (files.length > 0) {
+      const url = URL.createObjectURL(files[0]);
+      setPreviewUrl(url);
+      
+      // Cleanup function to revoke the URL when component unmounts or files change
+      return () => {
+        URL.revokeObjectURL(url);
+      };
+    } else {
+      setPreviewUrl(null);
+    }
+  }, [files]);
 
   const stepTitles = [
     'Upload Files',
@@ -34,11 +50,12 @@ export default function StepWizard({ className = '' }: StepWizardProps) {
     <Step1 files={files} setFiles={setFiles} next={next} key={0} />,
     <Step2 files={files} captions={captions} setCaptions={setCaptions} next={next} back={back} key={1} />,
     <Step3 captions={captions} selected={selected} setSelected={setSelected} next={next} back={back} key={2} />,
-    <Step4 selected={selected} back={back} key={3} />,
+    <Step4 selected={selected} previewUrl={previewUrl} back={back} key={3} />,
   ];
 
   console.log('🪄 current step:', step);
-console.log('🪄 steps[step]:', steps[step]);
+  console.log('🪄 steps[step]:', steps[step]);
+  
   return (
     <div className={`min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 ${className}`}>
       <div className="max-w-4xl mx-auto px-6 py-12">
