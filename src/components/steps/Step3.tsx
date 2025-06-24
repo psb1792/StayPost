@@ -1,36 +1,130 @@
 import React from 'react';
-import { Check, ArrowLeft, MessageSquare } from 'lucide-react';
+import { Check, ArrowLeft, MessageSquare, Image as ImageIcon, Palette } from 'lucide-react';
 
 interface Step3Props {
   captions: string[];
   selected: string | null;
   setSelected: (caption: string) => void;
+  selectedFilter: string | null;
+  previewUrl: string | null;
   next: () => void;
   back: () => void;
 }
 
-export default function Step3({ captions, selected, setSelected, next, back }: Step3Props) {
+const filterOptions = [
+  { id: 'none', name: 'Original', cssFilter: 'none' },
+  { id: 'warm', name: 'Warm', cssFilter: 'sepia(0.3) saturate(1.2) brightness(1.1) contrast(1.1)' },
+  { id: 'vivid', name: 'Vivid', cssFilter: 'saturate(1.5) contrast(1.2) brightness(1.05)' },
+  { id: 'vintage', name: 'Vintage', cssFilter: 'sepia(0.5) contrast(1.2) brightness(0.9) saturate(0.8)' },
+  { id: 'cool', name: 'Cool', cssFilter: 'hue-rotate(180deg) saturate(1.1) brightness(1.05)' },
+  { id: 'dramatic', name: 'Dramatic', cssFilter: 'contrast(1.5) brightness(0.9) saturate(1.3)' },
+  { id: 'soft', name: 'Soft', cssFilter: 'brightness(1.1) contrast(0.9) saturate(0.9) blur(0.5px)' },
+  { id: 'monochrome', name: 'Monochrome', cssFilter: 'grayscale(1) contrast(1.2) brightness(1.1)' }
+];
+
+export default function Step3({ captions, selected, setSelected, selectedFilter, previewUrl, next, back }: Step3Props) {
+  const selectedFilterOption = filterOptions.find(f => f.id === selectedFilter);
+
   return (
     <div className="space-y-8">
-      {/* Title */}
+      {/* Header */}
       <div>
         <h2 className="text-2xl font-bold text-gray-900 mb-2">3) Choose Your Caption</h2>
         <p className="text-gray-600">
-          Select the caption that best represents your content
+          Select the caption that best represents your filtered content
         </p>
       </div>
 
-      {/* Caption Selection Grid */}
+      {/* Content Preview Section */}
+      <div className="bg-gradient-to-br from-blue-50 to-purple-50 rounded-2xl p-6 border border-blue-200">
+        <div className="grid md:grid-cols-2 gap-6">
+          {/* Filtered Image Preview */}
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <ImageIcon className="w-5 h-5 text-blue-500" />
+              <h3 className="font-semibold text-gray-900">Your Image</h3>
+              {selectedFilterOption && selectedFilter !== 'none' && (
+                <div className="flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-xs">
+                  <Palette className="w-3 h-3" />
+                  {selectedFilterOption.name}
+                </div>
+              )}
+            </div>
+            
+            {previewUrl ? (
+              <div className="relative bg-white rounded-xl overflow-hidden shadow-lg">
+                <img
+                  src={previewUrl}
+                  alt="Filtered preview"
+                  className="w-full h-48 object-cover"
+                  style={{ 
+                    filter: selectedFilterOption?.cssFilter || 'none'
+                  }}
+                />
+                {selectedFilterOption && selectedFilter !== 'none' && (
+                  <div className="absolute bottom-2 left-2 bg-black/70 text-white px-2 py-1 rounded text-xs backdrop-blur-sm">
+                    {selectedFilterOption.name} Filter
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="w-full h-48 bg-gray-200 rounded-xl flex items-center justify-center">
+                <div className="text-center text-gray-500">
+                  <ImageIcon className="w-8 h-8 mx-auto mb-2" />
+                  <p className="text-sm">No image available</p>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Caption Preview */}
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <MessageSquare className="w-5 h-5 text-purple-500" />
+              <h3 className="font-semibold text-gray-900">Selected Caption</h3>
+            </div>
+            
+            <div className="bg-white rounded-xl p-4 shadow-lg min-h-[12rem] flex items-center">
+              {selected ? (
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <div className="w-6 h-6 bg-green-100 rounded-full flex items-center justify-center">
+                      <Check className="w-4 h-4 text-green-600" />
+                    </div>
+                    <span className="text-sm text-green-600 font-medium">Selected</span>
+                  </div>
+                  <p className="text-gray-800 font-medium leading-relaxed">
+                    {selected}
+                  </p>
+                </div>
+              ) : (
+                <div className="text-center text-gray-400 w-full">
+                  <MessageSquare className="w-8 h-8 mx-auto mb-2" />
+                  <p className="text-sm">Choose a caption below</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Caption Selection */}
       <div className="space-y-4">
+        <div className="flex items-center gap-2">
+          <MessageSquare className="w-5 h-5 text-blue-500" />
+          <h3 className="text-lg font-semibold text-gray-900">Available Captions</h3>
+        </div>
+
         {captions.length === 0 ? (
           <div className="text-center py-12">
             <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
               <MessageSquare className="w-8 h-8 text-gray-400" />
             </div>
-            <p className="text-gray-500">No captions available. Please go back and generate captions first.</p>
+            <p className="text-gray-500 mb-2">No captions available</p>
+            <p className="text-gray-400 text-sm">Please go back and generate captions first</p>
           </div>
         ) : (
-          <div className="grid gap-4 md:grid-cols-1 lg:grid-cols-1">
+          <div className="grid gap-4">
             {captions.map((caption, index) => (
               <div
                 key={index}
@@ -85,7 +179,7 @@ export default function Step3({ captions, selected, setSelected, next, back }: S
             <div className="flex items-center gap-2">
               <Check className="w-5 h-5 text-green-500" />
               <p className="text-sm text-green-700">
-                <strong>Perfect!</strong> You've selected your caption. Ready to proceed to the final step.
+                <strong>Perfect!</strong> You've selected your caption and applied the {selectedFilterOption?.name || 'Original'} filter. Ready to proceed to the final step.
               </p>
             </div>
           </div>
