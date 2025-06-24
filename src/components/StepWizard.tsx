@@ -8,6 +8,7 @@ import Step2Filter from './steps/Step2Filter';
 import Step2 from './steps/Step2';
 import Step3 from './steps/Step3';
 import Step4 from './steps/Step4';
+import Step5 from './steps/Step5';
 
 interface StepWizardProps {
   className?: string;
@@ -23,7 +24,7 @@ export default function StepWizard({ className = '' }: StepWizardProps) {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [selectedFilter, setSelectedFilter] = useState<string | null>(null);
 
-  const next = () => setStep((s) => Math.min(s + 1, 4));
+  const next = () => setStep((s) => Math.min(s + 1, 5));
   const back = () => setStep((s) => Math.max(s - 1, 0));
 
   const stepTitles = [
@@ -31,7 +32,8 @@ export default function StepWizard({ className = '' }: StepWizardProps) {
     'Apply Filter',
     'Add Captions',
     'Select Content',
-    'Final Preview'
+    'Final Preview',
+    'Share & Download'
   ];
 
   const steps = [
@@ -76,6 +78,13 @@ export default function StepWizard({ className = '' }: StepWizardProps) {
       back={back} 
       key={4} 
     />,
+    <Step5 
+      selected={selected} 
+      previewUrl={previewUrl} 
+      selectedFilter={selectedFilter}
+      back={back} 
+      key={5} 
+    />,
   ];
 
   console.log('🪄 current step:', step);
@@ -87,7 +96,7 @@ export default function StepWizard({ className = '' }: StepWizardProps) {
         {/* Progress Header */}
         <div className="mb-12">
           <div className="flex items-center justify-between mb-8">
-            <h1 className="text-3xl font-bold text-gray-900">Setup Wizard</h1>
+            <h1 className="text-3xl font-bold text-gray-900">Content Creation Wizard</h1>
             <div className="text-sm text-gray-500">
               Step {step + 1} of {stepTitles.length}
             </div>
