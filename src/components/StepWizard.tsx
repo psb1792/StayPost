@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { ChevronLeft, ChevronRight, Check } from 'lucide-react';
 
 import Step1 from './steps/Step1';
+import Step2Filter from './steps/Step2Filter';
 import Step2 from './steps/Step2';
 import Step3 from './steps/Step3';
 import Step4 from './steps/Step4';
@@ -20,12 +21,14 @@ export default function StepWizard({ className = '' }: StepWizardProps) {
   const [captions, setCaptions] = useState<string[]>([]);
   const [selected, setSelected] = useState<string | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [selectedFilter, setSelectedFilter] = useState<string | null>(null);
 
-  const next = () => setStep((s) => Math.min(s + 1, 3));
+  const next = () => setStep((s) => Math.min(s + 1, 4));
   const back = () => setStep((s) => Math.max(s - 1, 0));
 
   const stepTitles = [
     'Upload Files',
+    'Apply Filter',
     'Add Captions',
     'Select Content',
     'Review & Finish'
@@ -39,13 +42,36 @@ export default function StepWizard({ className = '' }: StepWizardProps) {
       next={next} 
       key={0} 
     />,
-    <Step2 files={files} captions={captions} setCaptions={setCaptions} next={next} back={back} key={1} />,
-    <Step3 captions={captions} selected={selected} setSelected={setSelected} next={next} back={back} key={2} />,
+    <Step2Filter
+      files={files}
+      previewUrl={previewUrl}
+      selectedFilter={selectedFilter}
+      setSelectedFilter={setSelectedFilter}
+      next={next}
+      back={back}
+      key={1}
+    />,
+    <Step2 
+      files={files} 
+      captions={captions} 
+      setCaptions={setCaptions} 
+      next={next} 
+      back={back} 
+      key={2} 
+    />,
+    <Step3 
+      captions={captions} 
+      selected={selected} 
+      setSelected={setSelected} 
+      next={next} 
+      back={back} 
+      key={3} 
+    />,
     <Step4 
       selected={selected} 
       previewUrl={previewUrl} 
       back={back} 
-      key={3} 
+      key={4} 
     />,
   ];
 
