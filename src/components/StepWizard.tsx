@@ -31,7 +31,7 @@ export default function StepWizard({ className = '' }: StepWizardProps) {
     'Apply Filter',
     'Add Captions',
     'Select Content',
-    'Review & Finish'
+    'Final Preview'
   ];
 
   const steps = [
@@ -72,6 +72,7 @@ export default function StepWizard({ className = '' }: StepWizardProps) {
     <Step4 
       selected={selected} 
       previewUrl={previewUrl} 
+      selectedFilter={selectedFilter}
       back={back} 
       key={4} 
     />,
