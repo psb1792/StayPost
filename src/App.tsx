@@ -1,8 +1,8 @@
 import React from 'react';
-import StepWizard from './components/StepWizard';
+import ImageMetaAnalyzer from './components/ImageMetaAnalyzer';
 
 function App() {
-  return <StepWizard />;
+  return <ImageMetaAnalyzer />;
 }
 
 export default App;
