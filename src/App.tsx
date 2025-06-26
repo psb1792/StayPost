@@ -1,8 +1,8 @@
 import React from 'react';
-import ImageMetaAnalyzer from './components/ImageMetaAnalyzer';
+import StayPostGenerator from './components/StayPostGenerator';
 
 function App() {
-  return <ImageMetaAnalyzer />;
+  return <StayPostGenerator />;
 }
 
 export default App;
