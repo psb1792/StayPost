@@ -1,8 +1,8 @@
 import React from 'react';
-import RelightDemo from './components/RelightDemo';
+import EnhancedImageProcessor from './components/EnhancedImageProcessor';
 
 function App() {
-  return <RelightDemo />;
+  return <EnhancedImageProcessor />;
 }
 
 export default App;
