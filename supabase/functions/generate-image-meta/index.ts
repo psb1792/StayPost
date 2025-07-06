@@ -1,40 +1,33 @@
-import { corsHeaders } from '../_shared/cors.ts'
+import { corsHeaders } from '../_shared/cors.ts';
 
 interface ImageMetaResponse {
-  main_features: string[]
-  view_type: string
-  emotions: string[]
-  hashtags: string[]
+  main_features: string[];
+  view_type: string;
+  emotions: string[];
+  hashtags: string[];
 }
 
-Deno.serve(async (req: Request) => {
+const handler = async (req: Request): Promise<Response> => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, {
       status: 200,
       headers: corsHeaders,
-    })
+    });
   }
 
   try {
-    // Parse the multipart form data
-    const formData = await req.formData()
-    const imageFile = formData.get('image') as File
+    const { imageBase64 } = await req.json();
 
-    if (!imageFile) {
+    if (!imageBase64) {
       return new Response(
-        JSON.stringify({ error: 'No image file provided' }),
+        JSON.stringify({ error: 'No image data provided' }),
         {
           status: 400,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         }
-      )
+      );
     }
-
-    // Convert image to base64 for OpenAI Vision API
-    const imageBuffer = await imageFile.arrayBuffer()
-    const base64Image = btoa(String.fromCharCode(...new Uint8Array(imageBuffer)))
-    const dataUrl = `data:${imageFile.type};base64,${base64Image}`
 
     // OpenAI API call
     const openaiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -85,7 +78,7 @@ Deno.serve(async (req: Request) => {
               {
                 type: 'image_url',
                 image_url: {
-                  url: dataUrl,
+                  url: `data:image/jpeg;base64,${imageBase64}`,
                   detail: 'high'
                 },
               },
@@ -95,22 +88,22 @@ Deno.serve(async (req: Request) => {
         max_tokens: 500,
         temperature: 0.7,
       }),
-    })
+    });
 
     if (!openaiResponse.ok) {
-      const errorData = await openaiResponse.text()
-      console.error('OpenAI API Error:', errorData)
+      const errorData = await openaiResponse.text();
+      console.error('OpenAI API Error:', errorData);
       return new Response(
         JSON.stringify({ error: 'Failed to analyze image with OpenAI' }),
         {
           status: 500,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         }
-      )
+      );
     }
 
-    const openaiData = await openaiResponse.json()
-    const content = openaiData.choices[0]?.message?.content
+    const openaiData = await openaiResponse.json();
+    const content = openaiData.choices[0]?.message?.content;
 
     if (!content) {
       return new Response(
@@ -119,22 +112,22 @@ Deno.serve(async (req: Request) => {
           status: 500,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         }
-      )
+      );
     }
 
     // Parse the JSON response from OpenAI
-    let imageMeta: ImageMetaResponse
+    let imageMeta: ImageMetaResponse;
     try {
-      imageMeta = JSON.parse(content)
+      imageMeta = JSON.parse(content);
     } catch (parseError) {
-      console.error('Failed to parse OpenAI response:', content)
+      console.error('Failed to parse OpenAI response:', content);
       return new Response(
         JSON.stringify({ error: 'Invalid response format from AI' }),
         {
           status: 500,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         }
-      )
+      );
     }
 
     // Validate the response structure
@@ -145,7 +138,7 @@ Deno.serve(async (req: Request) => {
           status: 500,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         }
-      )
+      );
     }
 
     // Return the structured metadata
@@ -155,10 +148,10 @@ Deno.serve(async (req: Request) => {
         status: 200,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       }
-    )
+    );
 
   } catch (error) {
-    console.error('Error in generate-image-meta function:', error)
+    console.error('Error in generate-image-meta function:', error);
     return new Response(
       JSON.stringify({ 
         error: 'Internal server error',
@@ -168,6 +161,8 @@ Deno.serve(async (req: Request) => {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       }
-    )
+    );
   }
-})
+};
+
+Deno.serve(handler);
