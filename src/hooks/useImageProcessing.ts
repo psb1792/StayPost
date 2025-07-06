@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { supabase, IMAGES_BUCKET, IMAGES_TABLE } from '../lib/supabase';
 import { generateRetouchPrompt, type ImageMetadata } from '../utils/generateRetouchPrompt';
-import { convertFileToBase64 } from './useGenerateStayPostContent';
+import { convertFileToBase64, selectPattern, generateTextByPattern, contentPatterns } from './useGenerateStayPostContent';
 
 interface ProcessedImageData {
   id: string;
@@ -9,6 +9,9 @@ interface ProcessedImageData {
   relighted_url: string | null;
   lighting_prompt: string | null;
   image_meta: ImageMetadata | null;
+  content_text: string | null;
+  hashtags: string | null;
+  pattern_used: string | null;
   file_name: string;
   file_size: number;
   mime_type: string;
@@ -84,11 +87,17 @@ export default function useImageProcessing(): UseImageProcessingReturn {
 
       const imageMeta: ImageMetadata = await metaResponse.json();
 
-      // Step 3: Generate lighting prompt based on metadata
+      // Step 3: Generate StayPost content based on metadata
+      setProgress('Generating StayPost content...');
+      const selectedPattern = selectPattern(imageMeta);
+      const generatedContent = generateTextByPattern(selectedPattern, imageMeta);
+      const hashtagsString = imageMeta.hashtags.join(' ');
+
+      // Step 4: Generate lighting prompt based on metadata
       setProgress('Generating lighting prompt...');
       const lightingPrompt = generateRetouchPrompt(imageMeta);
 
-      // Step 4: Create initial database record
+      // Step 5: Create initial database record with all content
       setProgress('Saving initial record...');
       const { data: dbRecord, error: dbError } = await supabase
         .from(IMAGES_TABLE)
@@ -96,6 +105,9 @@ export default function useImageProcessing(): UseImageProcessingReturn {
           original_url: originalUrl,
           lighting_prompt: lightingPrompt.prompt,
           image_meta: imageMeta,
+          content_text: generatedContent,
+          hashtags: hashtagsString,
+          pattern_used: selectedPattern.name,
           file_name: imageFile.name,
           file_size: imageFile.size,
           mime_type: imageFile.type,
@@ -107,7 +119,7 @@ export default function useImageProcessing(): UseImageProcessingReturn {
         throw new Error(`Failed to save record: ${dbError.message}`);
       }
 
-      // Step 5: Call relight API
+      // Step 6: Call relight API
       setProgress('Applying AI lighting effects...');
       const formData = new FormData();
       formData.append('image_file', imageFile);
@@ -127,7 +139,7 @@ export default function useImageProcessing(): UseImageProcessingReturn {
         return;
       }
 
-      // Step 6: Upload relighted image to storage
+      // Step 7: Upload relighted image to storage
       setProgress('Saving enhanced image...');
       const relightedImageBlob = await relightResponse.blob();
       const relightedFileName = `relighted_${Date.now()}_${imageFile.name}`;
@@ -150,7 +162,7 @@ export default function useImageProcessing(): UseImageProcessingReturn {
 
       const relightedUrl = relightedUrlData.publicUrl;
 
-      // Step 7: Update database record with relighted image URL
+      // Step 8: Update database record with relighted image URL
       setProgress('Finalizing...');
       const { data: updatedRecord, error: updateError } = await supabase
         .from(IMAGES_TABLE)
