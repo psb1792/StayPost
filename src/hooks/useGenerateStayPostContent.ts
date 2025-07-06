@@ -31,6 +31,21 @@ interface UseGenerateStayPostContentReturn {
   generateContent: (imageFile: File) => Promise<void>
 }
 
+// 🔧 File을 base64로 변환하는 유틸리티 함수
+const convertFileToBase64 = (file: File): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => {
+      const result = reader.result as string
+      // data:image/jpeg;base64, 부분을 제거하고 base64 데이터만 반환
+      const base64Data = result.split(',')[1]
+      resolve(base64Data)
+    }
+    reader.onerror = (error) => reject(error)
+    reader.readAsDataURL(file)
+  })
+}
+
 // 🎨 콘텐츠 패턴 정의 (10가지 패턴)
 const contentPatterns: ContentPattern[] = [
   // 1. 오션뷰 + 노을 패턴
@@ -269,19 +284,19 @@ export default function useGenerateStayPostContent(): UseGenerateStayPostContent
     setContent(null)
 
     try {
-      // 1. FormData로 이미지 전송
-      const formData = new FormData()
-      formData.append('image', imageFile)
+      // 1. File을 base64로 변환
+      const imageBase64 = await convertFileToBase64(imageFile)
 
-      // 2. Edge Function 호출
+      // 2. Edge Function 호출 (JSON 방식)
       const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-image-meta`
       
       const response = await fetch(apiUrl, {
         method: 'POST',
         headers: {
+          'Content-Type': 'application/json',
           'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
         },
-        body: formData,
+        body: JSON.stringify({ imageBase64 }),
       })
 
       if (!response.ok) {
@@ -330,5 +345,5 @@ export default function useGenerateStayPostContent(): UseGenerateStayPostContent
 }
 
 // 🔧 유틸리티 함수들 (필요시 별도 export)
-export { contentPatterns, selectPattern, generateTextByPattern }
+export { contentPatterns, selectPattern, generateTextByPattern, convertFileToBase64 }
 export type { ImageMeta, ContentPattern, StayPostContent }
