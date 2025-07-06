@@ -1,10 +1,11 @@
 import React, { useState, useRef } from 'react';
-import { Upload, Sparkles, Download, RefreshCw, AlertCircle, CheckCircle, Image as ImageIcon, Database, Lightbulb, Eye, Tag, Heart } from 'lucide-react';
+import { Upload, Sparkles, Download, RefreshCw, AlertCircle, CheckCircle, Image as ImageIcon, Database, Lightbulb, Eye, Tag, Heart, MessageSquare, Hash, Copy } from 'lucide-react';
 import useImageProcessing from '../hooks/useImageProcessing';
 
 export default function EnhancedImageProcessor() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [copied, setCopied] = useState<{ [key: string]: boolean }>({});
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   const { processedImage, loading, error, progress, processImage, clearResult } = useImageProcessing();
@@ -50,6 +51,18 @@ export default function EnhancedImageProcessor() {
     clearResult();
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
+    }
+  };
+
+  const copyToClipboard = async (text: string, key: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(prev => ({ ...prev, [key]: true }));
+      setTimeout(() => {
+        setCopied(prev => ({ ...prev, [key]: false }));
+      }, 2000);
+    } catch (err) {
+      console.error('Failed to copy text:', err);
     }
   };
 
@@ -183,8 +196,8 @@ export default function EnhancedImageProcessor() {
                   <span>AI Analysis</span>
                 </div>
                 <div className="flex items-center gap-2 text-gray-600">
-                  <Lightbulb className="w-4 h-4" />
-                  <span>Generate Prompt</span>
+                  <MessageSquare className="w-4 h-4" />
+                  <span>Generate Content</span>
                 </div>
                 <div className="flex items-center gap-2 text-gray-600">
                   <Sparkles className="w-4 h-4" />
@@ -226,11 +239,134 @@ export default function EnhancedImageProcessor() {
               <div className="w-16 h-16 bg-gradient-to-br from-green-400 to-emerald-500 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
                 <CheckCircle className="w-10 h-10 text-white" />
               </div>
-              <h2 className="text-3xl font-bold text-gray-900 mb-2">🎉 Enhancement Complete!</h2>
+              <h2 className="text-3xl font-bold text-gray-900 mb-2">🎉 Complete Processing Finished!</h2>
               <p className="text-gray-600 text-lg">
-                Your image has been analyzed, enhanced, and saved to cloud storage
+                AI analysis, content generation, image enhancement, and cloud storage complete
               </p>
             </div>
+
+            {/* Generated StayPost Content */}
+            {(processedImage.content_text || processedImage.hashtags) && (
+              <div className="bg-white rounded-2xl shadow-xl border border-gray-200 overflow-hidden">
+                <div className="bg-gradient-to-r from-emerald-500 to-teal-600 p-6">
+                  <h3 className="text-2xl font-bold text-white mb-2">Generated StayPost Content</h3>
+                  <p className="text-emerald-100">AI-generated social media content ready to use</p>
+                  {processedImage.pattern_used && (
+                    <div className="mt-3 inline-flex items-center gap-2 px-3 py-1 bg-white/20 text-white rounded-full text-sm">
+                      <Tag className="w-4 h-4" />
+                      <span>Pattern: {processedImage.pattern_used}</span>
+                    </div>
+                  )}
+                </div>
+                
+                <div className="p-8 space-y-8">
+                  {/* Main Content */}
+                  {processedImage.content_text && (
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <MessageSquare className="w-5 h-5 text-emerald-500" />
+                          <h4 className="text-lg font-semibold text-gray-900">Content Text</h4>
+                        </div>
+                        <button
+                          onClick={() => copyToClipboard(processedImage.content_text!, 'content')}
+                          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                            copied.content
+                              ? 'bg-green-100 text-green-700'
+                              : 'text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50'
+                          }`}
+                        >
+                          {copied.content ? (
+                            <>
+                              <CheckCircle className="w-4 h-4" />
+                              Copied!
+                            </>
+                          ) : (
+                            <>
+                              <Copy className="w-4 h-4" />
+                              Copy
+                            </>
+                          )}
+                        </button>
+                      </div>
+                      
+                      <div className="bg-gradient-to-br from-emerald-50 to-teal-50 rounded-xl p-6 border border-emerald-200">
+                        <pre className="text-gray-800 leading-relaxed whitespace-pre-wrap font-medium">
+                          {processedImage.content_text}
+                        </pre>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Hashtags */}
+                  {processedImage.hashtags && (
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Hash className="w-5 h-5 text-blue-500" />
+                          <h4 className="text-lg font-semibold text-gray-900">Hashtags</h4>
+                        </div>
+                        <button
+                          onClick={() => copyToClipboard(processedImage.hashtags!, 'hashtags')}
+                          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                            copied.hashtags
+                              ? 'bg-green-100 text-green-700'
+                              : 'text-blue-600 hover:text-blue-700 hover:bg-blue-50'
+                          }`}
+                        >
+                          {copied.hashtags ? (
+                            <>
+                              <CheckCircle className="w-4 h-4" />
+                              Copied!
+                            </>
+                          ) : (
+                            <>
+                              <Copy className="w-4 h-4" />
+                              Copy
+                            </>
+                          )}
+                        </button>
+                      </div>
+                      
+                      <div className="bg-gradient-to-br from-blue-50 to-purple-50 rounded-xl p-6 border border-blue-200">
+                        <p className="text-blue-800 font-medium text-lg">
+                          {processedImage.hashtags}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Combined Copy Button */}
+                  {processedImage.content_text && processedImage.hashtags && (
+                    <div className="flex justify-center pt-4 border-t border-gray-100">
+                      <button
+                        onClick={() => {
+                          const fullContent = `${processedImage.content_text}\n\n${processedImage.hashtags}`;
+                          copyToClipboard(fullContent, 'full');
+                        }}
+                        className={`flex items-center gap-3 px-8 py-4 rounded-xl font-medium transition-all duration-200 ${
+                          copied.full
+                            ? 'bg-green-500 text-white'
+                            : 'bg-gradient-to-r from-emerald-500 to-teal-600 text-white hover:from-emerald-600 hover:to-teal-700 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5'
+                        }`}
+                      >
+                        {copied.full ? (
+                          <>
+                            <CheckCircle className="w-5 h-5" />
+                            Complete Content Copied!
+                          </>
+                        ) : (
+                          <>
+                            <Copy className="w-5 h-5" />
+                            Copy Complete Content
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
 
             {/* Image Comparison */}
             <div className="bg-white rounded-2xl shadow-xl border border-gray-200 overflow-hidden">
@@ -421,11 +557,11 @@ export default function EnhancedImageProcessor() {
               <p className="text-gray-600 text-sm">Smart content recognition</p>
             </div>
             <div className="text-center">
-              <div className="w-12 h-12 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Lightbulb className="w-6 h-6 text-yellow-500" />
+              <div className="w-12 h-12 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <MessageSquare className="w-6 h-6 text-emerald-500" />
               </div>
-              <h3 className="font-semibold text-gray-900 mb-2">Smart Prompts</h3>
-              <p className="text-gray-600 text-sm">Context-aware lighting</p>
+              <h3 className="font-semibold text-gray-900 mb-2">Content Generation</h3>
+              <p className="text-gray-600 text-sm">AI-powered social content</p>
             </div>
             <div className="text-center">
               <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
