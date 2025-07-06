@@ -1,8 +1,8 @@
 import React from 'react';
-import StayPostGenerator from './components/StayPostGenerator';
+import RelightDemo from './components/RelightDemo';
 
 function App() {
-  return <StayPostGenerator />;
+  return <RelightDemo />;
 }
 
 export default App;
