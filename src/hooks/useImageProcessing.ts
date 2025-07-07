@@ -91,7 +91,11 @@ export default function useImageProcessing(): UseImageProcessingReturn {
       setProgress('Generating StayPost content...');
       const selectedPattern = selectPattern(imageMeta);
       const generatedContent = generateTextByPattern(selectedPattern, imageMeta);
-      const hashtagsString = imageMeta.hashtags.join(' ');
+      const hashtags = Array.isArray(imageMeta.hashtags)
+        ? imageMeta.hashtags
+        : typeof imageMeta.hashtags === 'string'
+          ? (imageMeta.hashtags as string).split(' ')
+          : [];
 
       // Step 4: Generate lighting prompt based on metadata
       setProgress('Generating lighting prompt...');
@@ -106,7 +110,7 @@ export default function useImageProcessing(): UseImageProcessingReturn {
           lighting_prompt: lightingPrompt.prompt,
           image_meta: imageMeta,
           content_text: generatedContent,
-          hashtags: hashtagsString,
+          hashtags: hashtags,
           pattern_used: selectedPattern.name,
           file_name: imageFile.name,
           file_size: imageFile.size,
