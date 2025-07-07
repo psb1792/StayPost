@@ -7,6 +7,7 @@ export interface ImageMetadata {
   main_features: string[];
   view_type: string;
   emotions: string[];
+  hashtags: string[];
 }
 
 export interface LightingPrompt {

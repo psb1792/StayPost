@@ -3,6 +3,7 @@ import cors from 'cors';
 import multer from 'multer';
 import OpenAI from 'openai';
 import 'dotenv/config';
+import fetch, { FormData } from 'node-fetch';
 
 const app = express();
 app.use(cors());
@@ -68,4 +69,48 @@ app.get('/api/health', (req, res) => {
 const PORT = process.env.PORT || 4001;
 app.listen(PORT, () => {
   console.log(`🚀 API on http://localhost:${PORT}`);
+});
+
+app.post('/api/relight', upload.single('image_file'), async (req, res) => {
+  console.log(`[${new Date().toISOString()}] POST /api/relight 호출됨`);
+  const ENDPOINT = 'https://clipdrop-api.co/portrait-surface-normals/v1';
+  try {
+    const prompt = req.body.prompt;
+    const file = req.file;
+
+    if (!file || !prompt) {
+      return res.status(400).json({ error: 'Missing file or prompt' });
+    }
+
+    
+    const formData = new FormData();
+    formData.append('image_file', file.buffer, file.originalname);
+    formData.append('prompt', prompt);
+
+    const response = await fetch(ENDPOINT,  {
+      method: 'POST',
+      headers: {
+        'x-api-key': process.env.CLIPDROP_API_KEY,
+      },
+      body: formData,
+    });
+
+    console.error(`🛑 ClipDrop 응답 상태: ${response.status}`);
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`🛑 ClipDrop 오류 본문: ${errorText}`);
+      return res.status(500).json({ error: 'ClipDrop relighting failed' });
+    }
+
+    const buffer = await response.arrayBuffer();
+    res.setHeader('Content-Type', 'image/jpeg');
+    res.send(Buffer.from(buffer));
+    console.log('📥 파일 정보:', file);
+    console.log('📝 프롬프트:', prompt);
+  } catch (err) {
+    console.error('❌ 리터칭 처리 실패:', err);
+    res.status(500).json({ error: 'relight-fail' });
+    console.error('❌ 리터칭 처리 실패:', err);
+  }
 });

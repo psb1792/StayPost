@@ -19,7 +19,7 @@ interface ContentPattern {
 // 최종 출력 타입
 interface StayPostContent {
   content: string
-  hashtags: string
+  hashtags: string[]
   pattern_used: string
   meta: ImageMeta
 }
@@ -315,15 +315,23 @@ export default function useGenerateStayPostContent(): UseGenerateStayPostContent
       // 4. 패턴 선택 및 콘텐츠 생성
       const selectedPattern = selectPattern(imageMeta)
       const generatedText = generateTextByPattern(selectedPattern, imageMeta)
-      const hashtagsString = imageMeta.hashtags.join(' ')
+      const hashtags =
+        typeof imageMeta.hashtags === 'string'
+          ? (imageMeta.hashtags as string).split(' ')
+          : imageMeta.hashtags;
 
-      // 5. 최종 결과 구성
+
+        // 5. 최종 결과 구성
       const finalContent: StayPostContent = {
         content: generatedText,
-        hashtags: hashtagsString,
+        hashtags, // ✅ 배열로 전달
         pattern_used: selectedPattern.name,
-        meta: imageMeta
-      }
+        meta: imageMeta,
+      };
+
+      console.log('✅ 최종 hashtags 타입:', typeof finalContent.hashtags, finalContent.hashtags);
+      
+      
 
       setContent(finalContent)
 
