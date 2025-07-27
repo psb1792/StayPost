@@ -1,5 +1,6 @@
-import React from 'react';
-import { Upload, Image, X } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Upload, Image, X, Check } from 'lucide-react';
+import StoreNameInput from '../StoreNameInput';
 
 interface Step1Props {
   files: File[];
@@ -9,6 +10,27 @@ interface Step1Props {
 }
 
 export default function Step1({ files, setFiles, setPreviewUrl, next }: Step1Props) {
+  const [storeId, setStoreId] = useState<string | null>(null);
+  const [storeName, setStoreName] = useState<string>('');
+  const [storeSlug, setStoreSlug] = useState<string>('');
+
+  const handleStoreCreated = (store: any) => {
+    setStoreId(store.id);
+    setStoreName(store.store_name);
+    setStoreSlug(store.slug);
+  };
+
+  // Auto-advance to next step after store creation and image upload
+  useEffect(() => {
+    if (storeId && files.length > 0) {
+      const timer = setTimeout(() => {
+        next();
+      }, 1500); // 1.5초 후 자동 이동
+
+      return () => clearTimeout(timer);
+    }
+  }, [storeId, files.length, next]);
+
   const handleFiles = (fileList: FileList | null) => {
     if (!fileList) return;
     const arr = Array.from(fileList);
@@ -47,12 +69,72 @@ export default function Step1({ files, setFiles, setPreviewUrl, next }: Step1Pro
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
+  // Store creation not completed yet
+  if (!storeId) {
+    return (
+      <div className="space-y-8">
+        {/* Title */}
+        <div>
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">1) 가게 정보 입력</h2>
+          <p className="text-gray-600">먼저 가게명을 입력하여 고유한 URL을 생성해주세요</p>
+        </div>
+
+        {/* Store Name Input Component */}
+        <div className="bg-white rounded-xl shadow-lg p-8">
+          <StoreNameInput onStoreCreated={handleStoreCreated} />
+        </div>
+        
+        {/* Success Message */}
+        {storeId && (
+          <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+            <div className="flex items-center space-x-3">
+              <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
+                <Check className="w-4 h-4 text-green-600" />
+              </div>
+              <div>
+                <p className="font-medium text-green-900">가게가 성공적으로 생성되었습니다!</p>
+                <p className="text-sm text-green-700">
+                  {files.length > 0 
+                    ? "이미지가 업로드되었습니다. 1.5초 후 자동으로 다음 단계로 이동합니다..." 
+                    : "이제 이미지를 업로드해주세요."
+                  }
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // Store creation completed, show image upload UI
   return (
     <div className="space-y-8">
       {/* Title */}
       <div>
         <h2 className="text-2xl font-bold text-gray-900 mb-2">1) Upload Photos</h2>
         <p className="text-gray-600">Select multiple image files to get started</p>
+      </div>
+
+      {/* Store Info Display */}
+      <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-sm text-blue-600 mb-1">선택된 가게</p>
+            <p className="font-medium text-blue-900">{storeName}</p>
+            <p className="text-xs text-blue-600">https://staypost.kr/{storeSlug}</p>
+          </div>
+          <button
+            onClick={() => {
+              setStoreId(null);
+              setStoreName('');
+              setStoreSlug('');
+            }}
+            className="text-xs text-blue-600 hover:text-blue-800 underline"
+          >
+            변경하기
+          </button>
+        </div>
       </div>
 
       {/* File Upload Area */}
