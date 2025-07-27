@@ -1,8 +1,10 @@
 import React from 'react';
-import EnhancedImageProcessor from './components/EnhancedImageProcessor';
+
+
+import StepWizard from './components/StepWizard'
 
 function App() {
-  return <EnhancedImageProcessor />;
+  return <StepWizard />
 }
 
-export default App;
+export default App
