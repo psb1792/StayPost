@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { invokeSupabaseFunction } from '../lib/supabase';
 
 interface UseRelightImageReturn {
   relightedImageUrl: string | null;
@@ -24,29 +25,33 @@ export default function useRelightImage(): UseRelightImageReturn {
     setRelightedImageUrl(null);
 
     try {
-      // Prepare form data
-      const formData = new FormData();
-      formData.append('image_file', imageFile);
-      formData.append('prompt', prompt.trim());
-
-      // Call the API route
-      const response = await fetch('/api/relight', {
-        method: 'POST',
-        body: formData,
+      // Convert image to base64 for Supabase function
+      const base64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          const result = reader.result as string;
+          const base64Data = result.split(',')[1];
+          resolve(base64Data);
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(imageFile);
       });
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => null);
-        throw new Error(
-          errorData?.error || `HTTP error! status: ${response.status}`
-        );
+      // Use Supabase client with automatic token handling
+      const { data, error } = await invokeSupabaseFunction('relight', {
+        imageBase64: base64,
+        prompt: prompt.trim()
+      });
+
+      if (error) {
+        throw new Error(error.message || 'Failed to relight image');
       }
 
-      // Get the image blob and create object URL
-      const imageBlob = await response.blob();
-      const imageUrl = URL.createObjectURL(imageBlob);
-      
-      setRelightedImageUrl(imageUrl);
+      if (!data || !data.imageUrl) {
+        throw new Error('No relighted image received from the server');
+      }
+
+      setRelightedImageUrl(data.imageUrl);
     } catch (err) {
       console.error('Relight error:', err);
       setError(err instanceof Error ? err.message : 'Failed to relight image');

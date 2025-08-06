@@ -34,7 +34,11 @@ export default function StoreNameInput({ onStoreCreated }: StoreNameInputProps) 
   const [error, setError] = useState('')
   
   const debounceRef = useRef<NodeJS.Timeout>()
-  const supabaseUrl = 'https://noeaddfhcvlmbwmyrbzh.functions.supabase.co'
+  
+  // Supabase Edge Function URL 설정 (dev/prod 분기)
+  const baseUrl = import.meta.env.DEV 
+    ? 'http://localhost:5001'
+    : `${import.meta.env.VITE_SUPABASE_URL}/functions/v1`;
 
   // Generate slug from store name
   useEffect(() => {
@@ -73,8 +77,9 @@ export default function StoreNameInput({ onStoreCreated }: StoreNameInputProps) 
     setError('')
 
     try {
-      const response = await fetch(`${supabaseUrl}/check-slug-availability`, {
+      const response = await fetch(`${baseUrl}/check-slug-availability`, {
         method: 'POST',
+        mode: 'cors',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY || 'your-anon-key'}`
@@ -112,8 +117,9 @@ export default function StoreNameInput({ onStoreCreated }: StoreNameInputProps) 
     setError('')
 
     try {
-      const response = await fetch(`${supabaseUrl}/create-store`, {
+      const response = await fetch(`${baseUrl}/create-store`, {
         method: 'POST',
+        mode: 'cors',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY || 'your-anon-key'}`

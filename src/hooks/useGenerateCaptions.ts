@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import axios from 'axios'; // Example import for axios
+import { invokeSupabaseFunction } from '../lib/supabase';
 
 // env flag: VITE_USE_MOCK=true
 const USE_MOCK = import.meta.env.VITE_USE_MOCK === 'true';
@@ -8,7 +8,7 @@ interface UseGenerateCaptionsReturn {
   captions: string[];
   loading: boolean;
   error: string | null;
-  generate: (files: File[]) => Promise<void>;
+  generate: (emotion: string, templateId: string) => Promise<void>;
 }
 
 export default function useGenerateCaptions(): UseGenerateCaptionsReturn {
@@ -16,9 +16,9 @@ export default function useGenerateCaptions(): UseGenerateCaptionsReturn {
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
-  const generate = async (files: File[]): Promise<void> => {
-    if (!files || files.length === 0) {
-      setError('No files provided');
+  const generate = async (emotion: string, templateId: string): Promise<void> => {
+    if (!emotion || !templateId) {
+      setError('Emotion and template ID are required');
       return;
     }
 
@@ -37,31 +37,26 @@ export default function useGenerateCaptions(): UseGenerateCaptionsReturn {
         return;
       }
 
-      // 실제 axios 호출
-      const form = new FormData();
-      files.forEach((f) => form.append('images', f));
-      
-      const { data } = await axios.post('/api/caption', form, {
-        headers: { 'Content-Type': 'multipart/form-data' },
+      // Use Supabase client with automatic token handling
+      const { data, error } = await invokeSupabaseFunction('generateCaption', {
+        emotion,
+        templateId
       });
       
-      setCaptions(data.captions);
+      if (error) {
+        throw new Error(error.message || 'Failed to generate caption');
+      }
+      
+      if (!data || !data.caption) {
+        throw new Error('No caption received from the server');
+      }
+      
+      setCaptions([data.caption]); // 단일 캡션을 배열로 변환
     } catch (err: any) {
       // Handle different types of errors
-      if (axios.isAxiosError(err)) {
-        if (err.response) {
-          // Server responded with error status
-          const message = err.response.data?.message || `Server error: ${err.response.status}`;
-          setError(message);
-        } else if (err.request) {
-          // Request was made but no response received
-          setError('Network error: Unable to reach the server');
-        } else {
-          // Something else happened
-          setError(`Request error: ${err.message}`);
-        }
+      if (err.name === 'TypeError' && err.message.includes('fetch')) {
+        setError('Network error: Unable to reach the server');
       } else {
-        // Non-axios error
         setError(err instanceof Error ? err.message : 'An unexpected error occurred');
       }
       
