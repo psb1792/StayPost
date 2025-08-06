@@ -6,6 +6,7 @@ interface Step4Props {
   previewUrl: string | null;
   selectedFilter: string | null;
   back: () => void;
+  next: () => void;
 }
 
 const filterOptions = [
@@ -19,7 +20,7 @@ const filterOptions = [
   { id: 'monochrome', name: 'Monochrome', cssFilter: 'grayscale(1) contrast(1.2) brightness(1.1)' }
 ];
 
-export default function Step4({ selected, previewUrl, selectedFilter, back }: Step4Props) {
+export default function Step4({ selected, previewUrl, selectedFilter, back, next }: Step4Props) {
   const [copied, setCopied] = useState(false);
   const [liked, setLiked] = useState(false);
   const [bookmarked, setBookmarked] = useState(false);
@@ -284,13 +285,21 @@ export default function Step4({ selected, previewUrl, selectedFilter, back }: St
       </div>
 
       {/* Navigation */}
-      <div className="flex justify-start pt-6 border-t border-gray-100">
+      <div className="flex justify-between pt-6 border-t border-gray-100">
         <button
           onClick={back}
           className="flex items-center gap-2 px-6 py-3 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg font-medium transition-all duration-200"
         >
           <ArrowLeft className="w-4 h-4" />
           Back
+        </button>
+        
+        <button
+          onClick={next}
+          className="flex items-center gap-2 px-6 py-3 bg-blue-500 text-white hover:bg-blue-600 rounded-lg font-medium transition-all duration-200"
+        >
+          Continue to Share
+          <ArrowLeft className="w-4 h-4 rotate-180" />
         </button>
       </div>
     </div>

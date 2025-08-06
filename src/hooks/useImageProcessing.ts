@@ -74,6 +74,7 @@ export default function useImageProcessing(): UseImageProcessingReturn {
       
       const metaResponse = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-image-meta`, {
         method: 'POST',
+        mode: 'cors',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
@@ -131,6 +132,10 @@ export default function useImageProcessing(): UseImageProcessingReturn {
 
       const relightResponse = await fetch('/api/relight', {
         method: 'POST',
+        mode: 'cors',
+        headers: {
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+        },
         body: formData,
       });
 

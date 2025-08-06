@@ -18,7 +18,7 @@
 CREATE TABLE IF NOT EXISTS store_profiles (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   store_name text NOT NULL,
-  slug text UNIQUE NOT NULL,
+  store_slug text UNIQUE NOT NULL,
   created_at timestamptz DEFAULT now(),
   updated_at timestamptz DEFAULT now()
 );
@@ -48,7 +48,7 @@ CREATE POLICY "Allow authenticated users to update stores"
   USING (true);
 
 -- Create index for fast slug lookups
-CREATE INDEX IF NOT EXISTS idx_store_profiles_slug ON store_profiles(slug);
+CREATE INDEX IF NOT EXISTS idx_store_profiles_slug ON store_profiles(store_slug);
 
 -- Create trigger to automatically update updated_at
 CREATE OR REPLACE FUNCTION update_updated_at_column()

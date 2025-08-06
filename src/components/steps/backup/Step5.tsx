@@ -1,10 +1,16 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Share2, Download, CheckCircle, ArrowLeft, Sparkles, Heart, MessageCircle, Send, Bookmark, MoreHorizontal, Palette, Image as ImageIcon, Copy, ExternalLink } from 'lucide-react';
+import EmotionCanvas from '../EmotionCanvas';
+import { supabase } from '../../lib/supabase';
+import { generateSeoMeta } from '../../utils/generateSeoMeta';
 
 interface Step5Props {
   selected: string | null;
   previewUrl: string | null;
   selectedFilter: string | null;
+  emotion: string;
+  templateId: string;
+  storeSlug: string;
   back: () => void;
 }
 
@@ -19,7 +25,15 @@ const filterOptions = [
   { id: 'monochrome', name: 'Monochrome', cssFilter: 'grayscale(1) contrast(1.2) brightness(1.1)' }
 ];
 
-export default function Step5({ selected, previewUrl, selectedFilter, back }: Step5Props) {
+export default function Step5({ selected, previewUrl, selectedFilter, emotion, templateId, storeSlug, back }: Step5Props) {
+  console.log('🎯 Step5 rendered with props:');
+  console.log('🎯 selected:', selected);
+  console.log('🎯 previewUrl:', previewUrl);
+  console.log('🎯 selectedFilter:', selectedFilter);
+  console.log('🎯 emotion:', emotion);
+  console.log('🎯 templateId:', templateId);
+  console.log('🎯 storeSlug:', storeSlug);
+  
   const [shareStatus, setShareStatus] = useState<'idle' | 'sharing' | 'shared' | 'error'>('idle');
   const [downloadStatus, setDownloadStatus] = useState<'idle' | 'downloading' | 'downloaded' | 'error'>('idle');
   const [shareError, setShareError] = useState<string>('');
@@ -65,7 +79,13 @@ export default function Step5({ selected, previewUrl, selectedFilter, back }: St
   };
 
   const handleDownload = async () => {
-    if (!previewUrl || !canvasRef.current) {
+    console.log('📥 handleDownload called');
+    console.log('📥 canvasRef.current:', canvasRef.current);
+    console.log('📥 selected:', selected);
+    console.log('📥 previewUrl:', previewUrl);
+    
+    if (!canvasRef.current || !selected || !previewUrl) {
+      console.log('❌ Missing required data for download');
       setDownloadStatus('error');
       setTimeout(() => setDownloadStatus('idle'), 3000);
       return;
@@ -74,117 +94,76 @@ export default function Step5({ selected, previewUrl, selectedFilter, back }: St
     setDownloadStatus('downloading');
 
     try {
-      const canvas = canvasRef.current;
-      const ctx = canvas.getContext('2d');
-      if (!ctx) throw new Error('Canvas context not available');
-
-      // Set canvas size
-      const canvasWidth = 400;
-      const canvasHeight = 600;
-      canvas.width = canvasWidth;
-      canvas.height = canvasHeight;
-
-      // Create image
-      const img = new Image();
-      img.crossOrigin = 'anonymous';
-      
-      img.onload = () => {
-        // Clear canvas
-        ctx.fillStyle = '#ffffff';
-        ctx.fillRect(0, 0, canvasWidth, canvasHeight);
-
-        // Draw image (square aspect ratio)
-        const imageSize = 360;
-        const imageX = (canvasWidth - imageSize) / 2;
-        const imageY = 40;
-        
-        ctx.save();
-        
-        // Apply filter if selected
-        if (selectedFilterOption && selectedFilter !== 'none') {
-          // Note: CSS filters can't be directly applied to canvas
-          // This is a simplified approach - in production you'd want proper image filtering
-          ctx.filter = selectedFilterOption.cssFilter;
-        }
-        
-        ctx.drawImage(img, imageX, imageY, imageSize, imageSize);
-        ctx.restore();
-
-        // Draw caption background
-        const captionY = imageY + imageSize + 20;
-        const captionHeight = 120;
-        ctx.fillStyle = '#f8fafc';
-        ctx.fillRect(20, captionY, canvasWidth - 40, captionHeight);
-
-        // Draw caption text
-        if (selected) {
-          ctx.fillStyle = '#1f2937';
-          ctx.font = '16px system-ui, -apple-system, sans-serif';
-          ctx.textAlign = 'left';
-          
-          // Word wrap caption
-          const words = selected.split(' ');
-          const lines = [];
-          let currentLine = '';
-          const maxWidth = canvasWidth - 80;
-          
-          for (const word of words) {
-            const testLine = currentLine + (currentLine ? ' ' : '') + word;
-            const metrics = ctx.measureText(testLine);
-            
-            if (metrics.width > maxWidth && currentLine) {
-              lines.push(currentLine);
-              currentLine = word;
-            } else {
-              currentLine = testLine;
-            }
-          }
-          if (currentLine) lines.push(currentLine);
-          
-          // Draw lines
-          lines.forEach((line, index) => {
-            ctx.fillText(line, 40, captionY + 30 + (index * 24));
-          });
-        }
-
-        // Draw filter badge if applied
-        if (selectedFilterOption && selectedFilter !== 'none') {
-          ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-          ctx.fillRect(imageX + 10, imageY + 10, 100, 30);
-          
-          ctx.fillStyle = '#ffffff';
-          ctx.font = '12px system-ui, -apple-system, sans-serif';
-          ctx.textAlign = 'left';
-          ctx.fillText(`${selectedFilterOption.name} Filter`, imageX + 20, imageY + 28);
-        }
-
-        // Download the canvas as image
-        canvas.toBlob((blob) => {
-          if (blob) {
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `social-post-${Date.now()}.png`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-            
-            setDownloadStatus('downloaded');
-            setTimeout(() => setDownloadStatus('idle'), 3000);
-          } else {
-            throw new Error('Failed to create blob');
-          }
+      // Convert canvas to blob
+      console.log('🔄 Converting canvas to blob...');
+      const blob = await new Promise<Blob | null>((resolve) => {
+        canvasRef.current?.toBlob((blob) => {
+          console.log('📦 Blob created:', blob);
+          console.log('📦 Blob size:', blob?.size);
+          console.log('📦 Blob type:', blob?.type);
+          resolve(blob);
         }, 'image/png');
-      };
+      });
 
-      img.onerror = () => {
-        setDownloadStatus('error');
-        setTimeout(() => setDownloadStatus('idle'), 3000);
-      };
+      if (!blob) {
+        console.log('❌ Blob is null');
+        throw new Error('Failed to create blob');
+      }
 
-      img.src = previewUrl;
+      // 1. Supabase Storage 업로드
+      const fileName = `emotion-card-${Date.now()}.png`;
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('processed-images')
+        .upload(fileName, blob, {
+          contentType: 'image/png',
+        });
+
+      if (uploadError) {
+        console.error('Storage upload failed:', uploadError);
+        throw new Error('Failed to upload image to storage');
+      }
+
+      // 2. Public URL 가져오기
+      const { data: publicUrlData } = supabase.storage
+        .from('processed-images')
+        .getPublicUrl(uploadData.path);
+
+      const publicUrl = publicUrlData.publicUrl;
+
+      // 3. SEO 메타데이터 생성
+      const seoMeta = generateSeoMeta(selected, emotion, storeSlug);
+
+      // 4. DB에 저장
+      const { error: insertError } = await supabase.from('emotion_cards').insert({
+        image_url: publicUrl,
+        caption: selected,
+        emotion: emotion,
+        template_id: templateId,
+        store_slug: storeSlug,
+        seo_meta: seoMeta,
+      });
+
+      if (insertError) {
+        console.error('emotion_cards 저장 실패:', insertError);
+        throw new Error('Failed to save to database');
+      }
+
+      console.log('✅ 감성 이미지 카드가 DB에 성공적으로 저장되었습니다.');
+
+      // 5. 다운로드 실행
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      setDownloadStatus('downloaded');
+      setTimeout(() => setDownloadStatus('idle'), 3000);
     } catch (error) {
+      console.error('Download error:', error);
       setDownloadStatus('error');
       setTimeout(() => setDownloadStatus('idle'), 3000);
     }
@@ -236,26 +215,12 @@ export default function Step5({ selected, previewUrl, selectedFilter, back }: St
           {/* Post Image */}
           <div className="relative bg-gray-100 aspect-square">
             {previewUrl ? (
-              <>
-                <img
-                  src={previewUrl}
-                  alt="Final post preview"
-                  className="w-full h-full object-cover"
-                  style={{ 
-                    filter: selectedFilterOption?.cssFilter || 'none'
-                  }}
-                />
-                
-                {/* Filter Badge */}
-                {selectedFilterOption && selectedFilter !== 'none' && (
-                  <div className="absolute top-3 left-3 bg-black/70 text-white px-2 py-1 rounded-lg backdrop-blur-sm">
-                    <div className="flex items-center gap-1">
-                      <Palette className="w-3 h-3" />
-                      <span className="text-xs font-medium">{selectedFilterOption.name}</span>
-                    </div>
-                  </div>
-                )}
-              </>
+              <EmotionCanvas
+                ref={canvasRef}
+                imageUrl={previewUrl}
+                caption={selected}
+                filter={selectedFilterOption?.cssFilter || 'none'}
+              />
             ) : (
               <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200">
                 <div className="text-center text-gray-400">
@@ -433,6 +398,9 @@ export default function Step5({ selected, previewUrl, selectedFilter, back }: St
               <p>
                 <strong>📱 Ready to Share:</strong> Optimized for all major social media platforms
               </p>
+              <p>
+                <strong>💾 Auto-Saved:</strong> Your content is automatically saved to our database for future access
+              </p>
             </div>
             <div className="mt-4 p-3 bg-white rounded-lg border border-green-200">
               <p className="text-xs text-green-700">
@@ -442,9 +410,6 @@ export default function Step5({ selected, previewUrl, selectedFilter, back }: St
           </div>
         </div>
       </div>
-
-      {/* Hidden Canvas for Download */}
-      <canvas ref={canvasRef} className="hidden" />
 
       {/* Navigation */}
       <div className="flex justify-start pt-6 border-t border-gray-100">

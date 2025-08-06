@@ -1,10 +1,5 @@
 import { createClient } from 'npm:@supabase/supabase-js@2'
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-}
+import { corsHeaders } from '../_shared/cors.ts'
 
 interface CheckSlugRequest {
   slug: string
@@ -19,7 +14,10 @@ Deno.serve(async (req: Request) => {
   try {
     // Handle CORS preflight requests
     if (req.method === 'OPTIONS') {
-      return new Response(null, { headers: corsHeaders })
+      return new Response(null, { 
+        status: 200,
+        headers: corsHeaders 
+      })
     }
 
     if (req.method !== 'POST') {

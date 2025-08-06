@@ -66,7 +66,7 @@ app.get('/api/health', (req, res) => {
 });
 
 /* ---------- 서버 시작 ---------- */
-const PORT = process.env.PORT || 4001;
+const PORT = process.env.PORT || 5001;
 app.listen(PORT, () => {
   console.log(`🚀 API on http://localhost:${PORT}`);
 });

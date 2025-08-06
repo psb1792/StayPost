@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { invokeSupabaseFunction } from '../lib/supabase'
 
 // 이미지 메타데이터 타입
 interface ImageMeta {
@@ -287,25 +288,21 @@ export default function useGenerateStayPostContent(): UseGenerateStayPostContent
       // 1. File을 base64로 변환
       const imageBase64 = await convertFileToBase64(imageFile)
 
-      // 2. Edge Function 호출 (JSON 방식)
-      const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-image-meta`
-      
-      const response = await fetch(apiUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-        },
-        body: JSON.stringify({ imageBase64 }),
+      // 2. Use Supabase client with automatic token handling
+      const { data, error } = await invokeSupabaseFunction('generate-image-meta', {
+        imageBase64
       })
 
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error || `HTTP error! status: ${response.status}`)
+      if (error) {
+        throw new Error(error.message || 'Failed to generate image meta')
+      }
+
+      if (!data) {
+        throw new Error('No data received from the server')
       }
 
       // 3. 이미지 메타데이터 받기
-      const imageMeta: ImageMeta = await response.json()
+      const imageMeta: ImageMeta = data as ImageMeta
       
       // 데이터 검증
       if (!imageMeta.main_features || !imageMeta.view_type || !imageMeta.emotions || !imageMeta.hashtags) {
