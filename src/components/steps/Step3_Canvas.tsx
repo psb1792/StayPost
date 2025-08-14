@@ -1,8 +1,28 @@
 import React, { useRef, useState } from 'react';
 import { Download, RefreshCw, Eye, Save } from 'lucide-react';
-import EmotionCanvas from '../EmotionCanvas';
-import { StylePreset } from '../../types/StylePreset';
-import { exportEmotionCard } from '../../utils/exportEmotionCard';
+import EmotionCanvas from '@/components/EmotionCanvas';
+import { StylePreset } from '@/types/StylePreset';
+import { exportEmotionCard } from '@/utils/exportEmotionCard';
+import { makeHookFromCaption } from '@/utils/makeHookFromCaption';
+
+// hook과 caption을 분리하는 함수
+function extractHookFromCaption(caption: string): string {
+  if (!caption) return '';
+  
+  // 줄바꿈으로 분리
+  const lines = caption.split('\n').filter(line => line.trim());
+  
+  // 첫 번째 줄이 hook (16자 이내)
+  if (lines.length > 0) {
+    const firstLine = lines[0].trim();
+    if (firstLine.length <= 16) {
+      return firstLine;
+    }
+  }
+  
+  // 기존 로직으로 fallback
+  return makeHookFromCaption(caption, 16);
+}
 
 interface Step3CanvasProps {
   previewUrl: string | null;
@@ -13,6 +33,7 @@ interface Step3CanvasProps {
   setCanvasUrl: (url: string) => void;
   selectedPreset: StylePreset;
   storeSlug: string;  // storeSlug 추가
+  setCardId: (cardId: string) => void;  // cardId 설정 함수 추가
   next: () => void;
   back: () => void;
 }
@@ -26,6 +47,7 @@ export default function Step3Canvas({
   setCanvasUrl,
   selectedPreset,
   storeSlug,  // storeSlug 추가
+  setCardId,  // cardId 설정 함수 추가
   next,
   back
 }: Step3CanvasProps) {
@@ -113,6 +135,9 @@ export default function Step3Canvas({
         console.log('✅ Export successful:', result);
         setSaveStatus('success');
         
+        // cardId 설정
+        setCardId(result.cardId);
+        
         // 성공 후 잠시 대기 후 다음 단계로
         setTimeout(() => {
           next();
@@ -187,6 +212,15 @@ export default function Step3Canvas({
                   imageUrl={previewUrl}
                   caption={generatedCaption}
                   filter={null}
+                  topText={{
+                    text: extractHookFromCaption(generatedCaption ?? ''),
+                    fontSize: 38, fontWeight: 800, lineClamp: 1, withOutline: true
+                  }}
+                  bottomText={{
+                    // 해시태그·긴 문장 들어오지 않도록 CTA 고정
+                    text: '자세한 안내와 예약은 프로필 링크에서 확인하세요.',
+                    fontSize: 26, lineClamp: 3, maxWidthPct: 0.9, withOutline: true
+                  }}
                 />
                 {/* Canvas URL 상태 표시 */}
                 {canvasUrl && (

@@ -25,7 +25,9 @@ export interface CaptionGenerationParams {
 }
 
 export interface CaptionGenerationResult {
+  hook: string;
   caption: string;
+  hashtags: string[];
   success: boolean;
   error?: string;
 }
@@ -128,17 +130,27 @@ export async function generateCaption({
       };
     }
 
-    // Supabase Edge Function 호출
+    // store_name 조회 (slug가 있는 경우에만)
+    let storeName: string | undefined;
+    if (slug) {
+      const { data: store, error } = await supabase
+        .from('store_profiles')
+        .select('store_name')
+        .eq('slug', slug)
+        .single();
+
+      if (error && error.code !== 'PGRST116') {
+        console.error('Failed to fetch store name:', error);
+      }
+      storeName = store?.store_name;
+    }
+
+    // 새로운 페이로드 형태로 통일
     const payload = {
-      emotion,
-      templateId,
-      emotionDescription: emotionInfo.description,
-      emotionKeywords: emotionInfo.keywords,
-      templateDescription: templateInfo.description,
-      templateContext: templateInfo.context,
-      imageDescription,
-      selectedPreset: selectedPreset || getDefaultPreset(),
-      slug,
+      emotion,            // string (예: "설렘")
+      templateId,         // string (예: "default_universal")
+      storeName,          // string | undefined
+      placeDesc: templateInfo.context  // string | undefined
     };
 
     const { data, error } = await supabase.functions.invoke('generate-caption', {
@@ -153,8 +165,17 @@ export async function generateCaption({
 
     console.log('✅ GPT API 응답 성공:', data);
     
+    // 1) 한 줄 강제 & 길이 제한
+    const hook = (data.hook || '')
+      .replace(/[\n\r]+/g, ' ')        // 줄바꿈 제거
+      .replace(/[#!?.,…~]+/g, '')      // 문장부호 제거
+      .trim()
+      .slice(0, 16);                    // 16자 컷
+    
     return {
-      caption: data.caption,
+      hook,
+      caption: data.caption || '',
+      hashtags: data.hashtags || [],
       success: true
     };
 
@@ -162,10 +183,13 @@ export async function generateCaption({
     console.error('❌ Failed to generate caption:', error);
     
     // Fallback: 감정에 맞는 기본 문구 반환
+    const fallbackHook = `${emotion}의 순간`;
     const fallbackCaption = `${emotion} 감정에 맞는 문구입니다. ✨`;
     
     return {
+      hook: fallbackHook,
       caption: fallbackCaption,
+      hashtags: [],
       success: false,
       error: error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.'
     };
