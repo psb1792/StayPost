@@ -11,7 +11,7 @@ ALTER TABLE store_profiles ENABLE ROW LEVEL SECURITY;
 
 -- Create policy: allow all inserts during development
 CREATE POLICY "Allow all inserts for now"
-  ON store_profiles
+  ON public.store_profiles
   FOR INSERT
   TO public
   WITH CHECK (true);

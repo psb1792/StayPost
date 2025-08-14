@@ -4,14 +4,14 @@ import { useState, useEffect } from 'react';
 import { ChevronLeft, ChevronRight, Check, LogOut, User } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { StylePreset } from '../types/StylePreset';
-import { getDefaultPreset } from '../utils/generateCaption';
+import { getDefaultPreset } from '../utils/stylePreset';
 import { useAuth } from '../hooks/useAuth';
+import { StyleProfile } from '../hooks/useAnalyzeStyle';
+import { FinalCaptionResult } from '../types/CanvasText';
 
 import Step1Upload from './steps/Step1_Upload';
 import Step2Emotion from './steps/Step2_Emotion';
-import Step3Canvas from './steps/Step3_Canvas';
-import Step4Meta from './steps/Step4_Meta';
-import Step5Export from './steps/Step5_Export';
+import Step3Result from './steps/Step3_Result';
 
 interface StepWizardProps {
   className?: string;
@@ -28,6 +28,7 @@ export default function StepWizard({ className = '' }: StepWizardProps) {
   const [selectedEmotion, setSelectedEmotion] = useState<string>('');
   const [templateId, setTemplateId] = useState<string>('');
   const [generatedCaption, setGeneratedCaption] = useState<string>('');
+  const [finalCaption, setFinalCaption] = useState<FinalCaptionResult | null>(null);
   const [canvasUrl, setCanvasUrl] = useState<string>('');
   const [cardId, setCardId] = useState<string | null>(null);
   const [seoMeta, setSeoMeta] = useState<{
@@ -44,6 +45,9 @@ export default function StepWizard({ className = '' }: StepWizardProps) {
   const [storeSlug, setStoreSlug] = useState<string>('default');
   const [hasExistingStore, setHasExistingStore] = useState<boolean>(false);
   const [selectedPreset, setSelectedPreset] = useState<StylePreset>(getDefaultPreset());
+  
+  // 새로운 스타일 분석 관련 상태
+  const [analyzedStyleProfile, setAnalyzedStyleProfile] = useState<StyleProfile | null>(null);
 
   // 기존 가게 확인 (자동 Step 진행 방지)
   useEffect(() => {
@@ -69,7 +73,7 @@ export default function StepWizard({ className = '' }: StepWizardProps) {
     }
   };
 
-  const next = () => setStep((s) => Math.min(s + 1, 4));
+  const next = () => setStep((s) => Math.min(s + 1, 2));
   const back = () => setStep((s) => Math.max(s - 1, 0));
 
   const handleSignOut = async () => {
@@ -82,10 +86,8 @@ export default function StepWizard({ className = '' }: StepWizardProps) {
 
   const stepTitles = [
     '이미지 업로드',
-    '감정 & 스타일',
-    'Canvas 미리보기',
-    'SEO 설정',
-    '다운로드 & 공유'
+    '스타일 확정',
+    '결과 확인 & 다운로드'
   ];
 
   const steps = [
@@ -102,6 +104,8 @@ export default function StepWizard({ className = '' }: StepWizardProps) {
       setSelectedPreset={setSelectedPreset}
       next={next}
       hasExistingStore={hasExistingStore}
+      analyzedStyleProfile={analyzedStyleProfile}
+      setAnalyzedStyleProfile={setAnalyzedStyleProfile}
       key={0}
     />,
     <Step2Emotion
@@ -111,52 +115,32 @@ export default function StepWizard({ className = '' }: StepWizardProps) {
       setTemplateId={setTemplateId}
       generatedCaption={generatedCaption}
       setGeneratedCaption={setGeneratedCaption}
+      finalCaption={finalCaption}
+      setFinalCaption={setFinalCaption}
       previewUrl={previewUrl}
       imageDescription={imageDescription}
       selectedPreset={selectedPreset}
       storeSlug={storeSlug}
       next={next}
       back={back}
+      analyzedStyleProfile={analyzedStyleProfile}
       key={1}
     />,
-    <Step3Canvas
+    <Step3Result
       previewUrl={previewUrl}
       generatedCaption={generatedCaption}
+      finalCaption={finalCaption}
       selectedEmotion={selectedEmotion}
       templateId={templateId}
       canvasUrl={canvasUrl}
       setCanvasUrl={setCanvasUrl}
       selectedPreset={selectedPreset}
-      storeSlug={storeSlug}  // storeSlug 추가
-      setCardId={setCardId}  // cardId 설정 함수 추가
-      next={next}
-      back={back}
-      key={2}
-    />,
-    <Step4Meta
-      generatedCaption={generatedCaption}
-      selectedEmotion={selectedEmotion}
-      templateId={templateId}
-      canvasUrl={canvasUrl}
+      storeSlug={storeSlug}
+      setCardId={setCardId}
       seoMeta={seoMeta}
       setSeoMeta={setSeoMeta}
-      storeSlug={storeSlug}
-      setStoreSlug={setStoreSlug}
-      selectedPreset={selectedPreset}
-      next={next}
       back={back}
-      key={3}
-    />,
-    <Step5Export
-      canvasUrl={canvasUrl}
-      cardId={cardId!}
-      generatedCaption={generatedCaption}
-      selectedEmotion={selectedEmotion}
-      templateId={templateId}
-      seoMeta={seoMeta}
-      storeSlug={storeSlug}
-      back={back}
-      key={4}
+      key={2}
     />,
   ];
 
@@ -170,13 +154,14 @@ export default function StepWizard({ className = '' }: StepWizardProps) {
     console.log('🪄 selectedEmotion:', selectedEmotion);
     console.log('🪄 templateId:', templateId);
     console.log('🪄 generatedCaption:', generatedCaption ? `${generatedCaption.substring(0, 30)}...` : 'null');
+    console.log('🪄 finalCaption:', finalCaption ? `hook: ${finalCaption.hook}, caption: ${finalCaption.caption.substring(0, 30)}...` : 'null');
     console.log('🪄 canvasUrl:', canvasUrl ? `${canvasUrl.substring(0, 50)}...` : 'null');
     console.log('🪄 cardId:', cardId);
     console.log('🪄 seoMeta:', seoMeta);
     console.log('🪄 storeSlug:', storeSlug);
     console.log('🪄 hasExistingStore:', hasExistingStore);
     console.log('🪄 selectedPreset:', selectedPreset);
-  }, [step, uploadedImage, previewUrl, imageDescription, selectedEmotion, templateId, generatedCaption, canvasUrl, cardId, seoMeta, storeSlug, hasExistingStore, selectedPreset]);
+  }, [step, uploadedImage, previewUrl, imageDescription, selectedEmotion, templateId, generatedCaption, finalCaption, canvasUrl, cardId, seoMeta, storeSlug, hasExistingStore, selectedPreset]);
   
   return (
     <div className={`min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 ${className}`}>

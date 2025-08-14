@@ -1,19 +1,27 @@
 @echo off
-echo 🔧 Cleaning up Supabase containers...
+echo Starting Supabase script...
+echo Current directory: %CD%
+echo.
 
-REM Check and remove supabase_vector_StayPost container if it exists
-docker ps -a --format "table {{.Names}}" | findstr "supabase_vector_StayPost" >nul
-if %errorlevel% equ 0 (
-    echo ⚠️  Found conflicting container: supabase_vector_StayPost
-    echo 🗑️  Removing container...
-    docker rm -f supabase_vector_StayPost
-    echo ✅ Container removed successfully
-) else (
-    echo ✅ No conflicting containers found
-)
+echo Step 1: Testing basic commands...
+echo Hello World
+echo.
 
-echo 🚀 Starting Supabase...
+echo Step 2: Testing Docker...
+docker --version
+echo Docker test completed
+echo.
+
+echo Step 3: Testing Supabase CLI...
+supabase --version
+echo Supabase test completed
+echo.
+
+echo Step 4: Starting Supabase...
 supabase start
+echo.
 
-echo ✅ Supabase started successfully!
+echo Step 5: Script completed
+echo.
+echo Press any key to continue...
 pause 
