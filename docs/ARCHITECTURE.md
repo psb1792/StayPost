@@ -1,7 +1,7 @@
 {
   "doc_meta": {
     "id": "ARCH-001",
-    "version": "2025-08-14",
+    "version": "2025-01-15",
     "owners": ["pablo"],
     "scope": ["frontend","edge-functions","supabase"],
     "status": "active",
@@ -13,7 +13,7 @@
 
 ## 📋 개요
 
-StayPost는 감정 기반 펜션/숙박업소 SNS 콘텐츠 생성기입니다. 사용자가 업로드한 이미지에 감정과 스타일을 선택하면 AI가 자동으로 캡션을 생성하고, Canvas를 통해 미리보기를 제공하며, SEO 메타데이터와 함께 최종 콘텐츠를 다운로드할 수 있는 웹 애플리케이션입니다.
+StayPost는 AI 기반 감정 카드 생성 플랫폼입니다. 사용자가 업로드한 이미지를 분석하여 감정을 표현하는 카드를 자동으로 생성하고, 실시간 편집을 통해 커스터마이징할 수 있는 웹 애플리케이션입니다.
 
 ## 🏗️ 전체 시스템 아키텍처
 
@@ -22,7 +22,6 @@ flowchart LR
   FE[Frontend (React/TS)] <--> SB[(Supabase Auth/DB/Storage)]
   FE <--> OF[Supabase Edge Functions]
   OF --> OpenAI[(OpenAI)]
-  OF --> ClipDrop[(ClipDrop)]
   FE --> Netlify[(Netlify Hosting)]
 ```
 
@@ -36,14 +35,14 @@ sequenceDiagram
     participant FE as Frontend (React)
     participant SB as Supabase (Auth/DB/Storage)
     participant EF as Edge Function
-    participant AI as OpenAI GPT-4o
+    participant AI as OpenAI GPT-4
 
     User->>FE: 이미지 업로드
     FE->>SB: Storage.put(emotion-cards/{slug}/{timestamp}.png)
     SB-->>FE: 이미지 URL 반환
     
     User->>FE: 감정 & 스타일 선택
-    FE->>EF: POST /generate-caption (JWT + 이미지URL + 감정)
+    FE->>EF: POST /generate-final-caption (JWT + 이미지URL + 감정)
     EF->>AI: 프롬프트 전송
     AI-->>EF: 캡션 생성 결과
     EF->>SB: INSERT emotion_cards (RLS 적용)
@@ -101,10 +100,9 @@ sequenceDiagram
 - **Lucide React**: 아이콘 라이브러리
 
 ### Backend
-- **Express.js**: API 서버
+- **Express.js**: API 서버 (개발 환경)
 - **Supabase**: 인증, 데이터베이스, 스토리지
-- **OpenAI GPT-4o**: AI 캡션 생성
-- **ClipDrop API**: 이미지 리터칭
+- **OpenAI GPT-4**: AI 캡션 생성
 
 ### Infrastructure
 - **Supabase Edge Functions**: 서버리스 함수
@@ -123,18 +121,18 @@ sequenceDiagram
 
 ### 2. 콘텐츠 생성 플로우
 ```
-Step 1: 이미지 업로드
+Step 1: 이미지 업로드 (Step1_Upload)
 ├── 파일 선택 → 미리보기 생성
 ├── 이미지 설명 입력 (선택사항)
 └── 스토어 정보 설정
 
-Step 2: 감정 & 스타일 선택
+Step 2: 감정 & 스타일 선택 (Step2_Emotion)
 ├── 감정 선택 (설렘, 평온, 즐거움, 로맨틱, 힐링)
 ├── 템플릿 선택 (기본, 오션 선셋, 럭셔리 풀, 카페 코지)
-└── AI 캡션 생성 (OpenAI GPT-4o)
+└── AI 캡션 생성 (OpenAI GPT-4)
 
-Step 3: 결과 확인 & 다운로드
-├── 실시간 캔버스 미리보기
+Step 3: 결과 확인 & 다운로드 (Step3_Result)
+├── 실시간 캔버스 미리보기 (EmotionCanvas)
 ├── SEO 메타데이터 설정
 ├── 최종 이미지 생성
 ├── 데이터베이스 저장
@@ -144,7 +142,7 @@ Step 3: 결과 확인 & 다운로드
 ### 3. AI 처리 플로우
 ```
 1. 사용자 입력 (감정 + 템플릿 + 이미지 설명)
-2. fn.generate_caption API 호출
+2. fn.generate-final-caption API 호출
 3. 프롬프트 엔지니어링으로 최적화된 캡션 생성
 4. 결과 반환 (캡션 + 해시태그)
 5. 에러 처리 및 fallback 메시지
@@ -163,14 +161,15 @@ Step 3: 결과 확인 & 다운로드
 - `table.reservations`: 예약 테이블
 
 ### 함수 ID
-- `fn.generate_caption`: 캡션 생성 함수
-- `fn.generate_image_meta`: 이미지 메타데이터 생성 함수
-- `fn.check_slug_availability`: 슬러그 중복 체크 함수
-- `fn.create_store`: 가게 생성 함수
+- `fn.generate-final-caption`: 최종 캡션 생성 함수
+- `fn.generate-image-meta`: 이미지 메타데이터 생성 함수
+- `fn.check-slug-availability`: 슬러그 중복 체크 함수
+- `fn.create-store`: 가게 생성 함수
+- `fn.analyze-and-suggest-style`: 스타일 분석 및 제안 함수
 
 ### 스토리지 ID
-- `storage.emotion_cards`: 감정 카드 이미지 스토리지
-- `storage.store_logos`: 가게 로고 스토리지
+- `storage.emotion-cards`: 감정 카드 이미지 스토리지
+- `storage.store-logos`: 가게 로고 스토리지
 
 ## 🗂️ 주요 컴포넌트 구조
 
@@ -183,21 +182,25 @@ App.tsx
     │   ├── Step1_Upload (이미지 업로드)
     │   ├── Step2_Emotion (감정 선택 & AI 생성)
     │   └── Step3_Result (결과 확인 & 다운로드)
+    │       └── EmotionCanvas (실시간 편집)
     ├── ReservationPage (예약 페이지)
     └── CompletePage (완료 페이지)
 ```
 
 ### 핵심 훅 (Hooks)
 - **useAuth**: 인증 상태 관리
-- **useGenerateCaptions**: AI 캡션 생성
+- **useGenerateFinalCaption**: AI 캡션 생성
 - **useGenerateImageMeta**: 이미지 메타데이터 생성
 - **useGenerateStayPostContent**: 전체 콘텐츠 생성
+- **useAnalyzeStyle**: 스타일 분석
 
 ### 유틸리티 함수
-- **generateCaption**: 캡션 생성 로직
+- **generateRetouchPrompt**: 리터치 프롬프트 생성
 - **generateSeoMeta**: SEO 메타데이터 생성
 - **exportEmotionCard**: 최종 이미지 내보내기
 - **saveEmotionCard**: 데이터베이스 저장
+- **selectPattern**: 패턴 선택 로직
+- **textLayout**: 텍스트 레이아웃 계산
 
 ## 🗄️ 데이터베이스 스키마
 
@@ -211,6 +214,7 @@ App.tsx
 - style_presets (jsonb)
 - intro (text)
 - created_at (timestamp)
+- user_id (uuid, FK)
 ```
 
 #### 2. emotion_cards
@@ -225,6 +229,7 @@ App.tsx
 - seo_keywords (text[])
 - seo_hashtags (text[])
 - created_at (timestamp)
+- user_id (uuid, FK)
 ```
 
 #### 3. reservations
@@ -244,14 +249,14 @@ App.tsx
 
 ### Express 서버 (localhost:5001)
 - `POST /api/caption`: 이미지 기반 캡션 생성
-- `POST /api/relight`: 이미지 리터칭 (ClipDrop)
 - `GET /api/health`: 헬스 체크
 
 ### Supabase Edge Functions
-- `POST /functions/v1/generate-caption`: AI 캡션 생성
+- `POST /functions/v1/generate-final-caption`: AI 캡션 생성
 - `POST /functions/v1/generate-image-meta`: 이미지 메타데이터 생성
 - `POST /functions/v1/create-store`: 스토어 생성
 - `GET /functions/v1/check-slug-availability`: 슬러그 중복 확인
+- `POST /functions/v1/analyze-and-suggest-style`: 스타일 분석 및 제안
 
 ## 🔐 보안 및 인증
 
@@ -324,11 +329,12 @@ Storage: Supabase Storage
 - **React.memo**: 불필요한 리렌더링 방지
 - **Lazy Loading**: 컴포넌트 지연 로딩
 - **Image Optimization**: 이미지 압축 및 최적화
+- **Canvas Optimization**: EmotionCanvas 렌더링 최적화
 
 ### 백엔드
 - **Edge Functions**: 서버리스 아키텍처
 - **Connection Pooling**: 데이터베이스 연결 최적화
-- **Caching**: Redis 캐싱 (향후 도입 예정)
+- **Caching**: 캡션 캐싱 (captionCache.ts)
 
 ## 🔄 상태 관리
 
@@ -360,11 +366,12 @@ Storage: Supabase Storage
 - **멀티 이미지 지원**: 여러 이미지 동시 처리
 - **템플릿 커스터마이징**: 사용자 정의 템플릿
 - **소셜 미디어 연동**: 자동 포스팅
+- **실시간 협업**: 다중 사용자 편집
 
 ### 기술 개선
 - **PWA 지원**: 오프라인 기능
-- **실시간 협업**: 다중 사용자 편집
 - **AI 모델 업그레이드**: 더 정교한 캡션 생성
+- **성능 최적화**: 이미지 처리 속도 개선
 
 ## 📝 개발 가이드라인
 
@@ -381,68 +388,57 @@ Storage: Supabase Storage
 ## 🏛️ ADR (Architecture Decision Records)
 
 ### ADR-001: Express + Edge Functions 분리
-**날짜**: 2025-08-14  
+**날짜**: 2025-01-15  
 **상태**: 승인됨  
 **컨텍스트**: 개발 환경에서는 빠른 반복을 위해 Express 서버를 사용하고, 프로덕션에서는 서버리스 아키텍처로 전환  
 **결정**: 개발/운영 환경 분리로 개발 속도와 운영 안정성 모두 확보  
 **결과**: 개발 시 빠른 API 테스트, 운영 시 비용 효율성 달성
 
 ### ADR-002: Supabase Auth + RLS
-**날짜**: 2025-08-14  
+**날짜**: 2025-01-15  
 **상태**: 승인됨  
 **컨텍스트**: 사용자 인증과 데이터 보안을 위한 솔루션 선택  
 **결정**: Supabase Auth로 인증, RLS로 데이터베이스 레벨 보안 구현  
 **결과**: 개발 복잡도 감소, 보안성 향상
 
-### ADR-003: OpenAI GPT-4o 선택
-**날짜**: 2025-08-14  
+### ADR-003: OpenAI GPT-4 선택
+**날짜**: 2025-01-15  
 **상태**: 승인됨  
 **컨텍스트**: 감정 기반 캡션 생성을 위한 AI 모델 선택  
-**결정**: GPT-4o의 높은 품질과 빠른 응답 속도로 선택  
+**결정**: GPT-4의 높은 품질과 안정성으로 선택  
 **결과**: 사용자 만족도 향상, 안정적인 AI 서비스 제공
 
-### ADR-004: 텍스트 렌더링 정확도 개선
-**날짜**: 2025-08-14  
+### ADR-004: 3단계 워크플로우 구조
+**날짜**: 2025-01-15  
 **상태**: 승인됨  
-**컨텍스트**: EmotionCanvas에서 텍스트 중앙 정렬이 부정확하여 시각적 품질 저하  
-**결정**: Canvas API의 measureText()를 사용하여 실제 텍스트 너비를 측정하고 정확한 중앙 위치 계산  
-**결과**: 텍스트 렌더링 품질 향상, 사용자 경험 개선
-
-### ADR-005: 스타일 분석 상태 관리 확장
-**날짜**: 2025-08-14  
-**상태**: 승인됨  
-**컨텍스트**: 사용자 스타일 분석 결과를 전역적으로 관리하여 일관된 스타일 적용 필요  
-**결정**: StepWizard에 analyzedStyleProfile 상태 추가하여 스타일 분석 결과를 전역 관리  
-**결과**: 스타일 일관성 향상, 사용자 맞춤형 콘텐츠 생성 개선
-
-### ADR-006: Step 구조 단순화
-**날짜**: 2025-08-14  
-**상태**: 승인됨  
-**컨텍스트**: 5단계 워크플로우가 복잡하여 사용자 경험 저하  
-**결정**: Step3_Canvas, Step4_Meta, Step5_Export를 Step3_Result로 통합하여 3단계 구조로 단순화  
+**컨텍스트**: 사용자 경험 개선을 위한 워크플로우 단순화  
+**결정**: 5단계에서 3단계로 단순화하여 사용자 경험 개선  
 **결과**: 사용자 경험 개선, 개발 복잡도 감소
+
+### ADR-005: EmotionCanvas 실시간 편집
+**날짜**: 2025-01-15  
+**상태**: 승인됨  
+**컨텍스트**: 사용자가 생성된 카드를 실시간으로 편집할 수 있는 기능 필요  
+**결정**: HTML5 Canvas API를 사용한 실시간 편집 기능 구현  
+**결과**: 사용자 맞춤형 콘텐츠 생성 가능, 사용자 만족도 향상
 
 ## 📋 Changelog
 
-### v1.0.0 (2025-08-14)
+### v0.0.0 (2025-01-15)
 - ✅ 초기 아키텍처 설계 완료
 - ✅ Supabase 기반 인증/데이터베이스 구축
 - ✅ React + TypeScript 프론트엔드 구현
-- ✅ OpenAI GPT-4o 연동
-- ✅ 기본 워크플로우 구현
+- ✅ OpenAI GPT-4 연동
+- ✅ 3단계 워크플로우 구현
+- ✅ EmotionCanvas 실시간 편집 기능
+- ✅ Edge Functions 구현
 
-### v1.1.0 (2025-08-14)
-- ✅ 텍스트 중앙 정렬 로직 개선 (EmotionCanvas)
-- ✅ 스타일 분석 상태 추가 (StepWizard)
-- ✅ store_profiles 테이블 필드 확장 및 RLS 정책 개선
-- ✅ Step 구조 단순화 (5단계 → 3단계)
-
-### v1.1.0 (예정)
+### v0.1.0 (예정)
 - 🔄 Edge Functions 최적화
 - 🔄 이미지 처리 성능 개선
 - 🔄 SEO 메타데이터 자동화
 
-### v1.2.0 (예정)
+### v0.2.0 (예정)
 - 🔄 멀티 이미지 지원
 - 🔄 템플릿 커스터마이징
 - 🔄 소셜 미디어 연동
