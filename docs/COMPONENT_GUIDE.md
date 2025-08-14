@@ -1,7 +1,7 @@
 {
   "doc_meta": {
     "id": "COMP-001",
-    "version": "2025-08-14",
+    "version": "2025-01-15",
     "owners": ["pablo"],
     "scope": ["frontend", "react", "components"],
     "status": "active",
@@ -69,6 +69,7 @@ const [imageDescription, setImageDescription] = useState<string>(''); // 이미�
 const [selectedEmotion, setSelectedEmotion] = useState<string>('');
 const [templateId, setTemplateId] = useState<string>('');
 const [generatedCaption, setGeneratedCaption] = useState<string>('');
+const [finalCaption, setFinalCaption] = useState<FinalCaptionResult | null>(null);
 const [canvasUrl, setCanvasUrl] = useState<string>('');
 const [cardId, setCardId] = useState<string | null>(null);
 const [seoMeta, setSeoMeta] = useState<{
@@ -81,8 +82,8 @@ const [storeSlug, setStoreSlug] = useState<string>('default');
 const [hasExistingStore, setHasExistingStore] = useState<boolean>(false);
 const [selectedPreset, setSelectedPreset] = useState<StylePreset>(getDefaultPreset());
   
-  // 새로운 스타일 분석 관련 상태
-  const [analyzedStyleProfile, setAnalyzedStyleProfile] = useState<StyleProfile | null>(null);
+// 새로운 스타일 분석 관련 상태
+const [analyzedStyleProfile, setAnalyzedStyleProfile] = useState<StyleProfile | null>(null);
 ```
 
 ### 주요 함수들
@@ -477,33 +478,39 @@ const [bottomTextAlign, setBottomTextAlign] = useState<'left' | 'center'>('left'
 ## 🏛️ ADR (Architecture Decision Records)
 
 ### ADR-001: React + TypeScript 선택
-**날짜**: 2025-01-14  
+**날짜**: 2025-01-15  
 **상태**: 승인됨  
 **컨텍스트**: 프론트엔드 프레임워크 및 언어 선택  
 **결정**: React 18 + TypeScript로 타입 안정성과 개발 생산성 확보  
 **결과**: 코드 품질 향상 및 유지보수성 개선
 
 ### ADR-002: 컴포넌트 계층 구조
-**날짜**: 2025-01-14  
+**날짜**: 2025-01-15  
 **상태**: 승인됨  
 **컨텍스트**: 복잡한 워크플로우를 위한 컴포넌트 구조 설계  
 **결정**: StepWizard를 메인 컨테이너로 하고 각 단계를 독립적인 컴포넌트로 분리  
 **결과**: 코드 재사용성 및 테스트 용이성 향상
 
 ### ADR-003: Canvas 기반 렌더링
-**날짜**: 2025-01-14  
+**날짜**: 2025-01-15  
 **상태**: 승인됨  
 **컨텍스트**: 고품질 이미지 생성 및 텍스트 렌더링 방식 선택  
 **결정**: HTML5 Canvas API를 사용한 직접 렌더링  
 **결과**: 고성능 이미지 생성 및 다양한 스타일링 지원
 
+### ADR-004: 3단계 워크플로우 구조
+**날짜**: 2025-01-15  
+**상태**: 승인됨  
+**컨텍스트**: 사용자 경험 개선을 위한 워크플로우 단순화  
+**결정**: 5단계에서 3단계로 단순화하여 사용자 경험 개선  
+**결과**: 사용자 경험 개선, 개발 복잡도 감소
+
 ## 📋 Changelog
 
 | 날짜 | 버전 | 요약 |
 |------|------|------|
-| 2025-01-14 | v1.0.0 | 컴포넌트 가이드 초기 작성 |
-| 2025-01-14 | v1.1.0 | Step 컴포넌트 상세 설명 추가 |
-| 2025-01-14 | v1.2.0 | 공통 패턴 및 주의사항 추가 |
-| 2025-01-14 | v2.0.0 | 실제 코드 분석 기반 완전 재작성 |
-| 2025-01-14 | v2.1.0 | 문서 동기화 및 최신 변경사항 반영 |
-| 2025-08-14 | v2.2.0 | Step 구조 단순화 (5단계 → 3단계) 및 컴포넌트 통합 |
+| 2025-01-15 | v1.0.0 | 컴포넌트 가이드 초기 작성 |
+| 2025-01-15 | v1.1.0 | Step 컴포넌트 상세 설명 추가 |
+| 2025-01-15 | v1.2.0 | 공통 패턴 및 주의사항 추가 |
+| 2025-01-15 | v2.0.0 | 실제 코드 분석 기반 완전 재작성 |
+| 2025-01-15 | v2.1.0 | 문서 동기화 및 최신 변경사항 반영 |
