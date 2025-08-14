@@ -124,16 +124,17 @@ export default function StepWizard({ className = '' }: StepWizardProps) {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [imageDescription, setImageDescription] = useState<string>('');
   
-  // 3. 콘텐츠 생성 상태
-  const [selectedEmotion, setSelectedEmotion] = useState<string>('');
-  const [templateId, setTemplateId] = useState<string>('');
+  // 3. AI 분석 및 생성 상태
+  const [aiSuggestedStyleProfile, setAiSuggestedStyleProfile] = useState<StyleProfile | null>(null);
+  const [isAnalyzing, setIsAnalyzing] = useState<boolean>(false);
+  const [isGenerating, setIsGenerating] = useState<boolean>(false);
   const [generatedCaption, setGeneratedCaption] = useState<string>('');
   
   // 4. 캔버스 및 결과 상태
   const [canvasUrl, setCanvasUrl] = useState<string>('');
   const [cardId, setCardId] = useState<string | null>(null);
   
-  // 5. SEO 메타데이터 상태
+  // 5. SEO 메타데이터 상태 (AI 자동 생성)
   const [seoMeta, setSeoMeta] = useState<{
     title: string;
     keywords: string[];
@@ -166,16 +167,17 @@ interface StepWizardState {
   previewUrl: string | null;
   imageDescription: string;
   
-  // 콘텐츠
-  selectedEmotion: string;
-  templateId: string;
+  // AI 분석 및 생성
+  aiSuggestedStyleProfile: StyleProfile | null;
+  isAnalyzing: boolean;
+  isGenerating: boolean;
   generatedCaption: string;
   
   // 결과
   canvasUrl: string;
   cardId: string | null;
   
-  // 메타데이터
+  // 메타데이터 (AI 자동 생성)
   seoMeta: {
     title: string;
     keywords: string[];
@@ -195,8 +197,9 @@ type StepWizardAction =
   | { type: 'SET_UPLOADED_IMAGE'; payload: File | null }
   | { type: 'SET_PREVIEW_URL'; payload: string | null }
   | { type: 'SET_IMAGE_DESCRIPTION'; payload: string }
-  | { type: 'SET_SELECTED_EMOTION'; payload: string }
-  | { type: 'SET_TEMPLATE_ID'; payload: string }
+  | { type: 'SET_AI_SUGGESTED_STYLE_PROFILE'; payload: StyleProfile | null }
+  | { type: 'SET_IS_ANALYZING'; payload: boolean }
+  | { type: 'SET_IS_GENERATING'; payload: boolean }
   | { type: 'SET_GENERATED_CAPTION'; payload: string }
   | { type: 'SET_CANVAS_URL'; payload: string }
   | { type: 'SET_CARD_ID'; payload: string | null }
@@ -1112,3 +1115,4 @@ const useMemoryMonitor = () => {
 | 2025-01-14 | v2.2.0 | 상태 변화 추적 시스템 추가 |
 | 2025-01-14 | v2.3.0 | 성능 최적화 가이드 추가 |
 | 2025-01-14 | v2.4.0 | 에러 처리 및 디버깅 가이드 추가 |
+| 2025-01-14 | v2.5.0 | 문서 동기화 및 최신 변경사항 반영 |

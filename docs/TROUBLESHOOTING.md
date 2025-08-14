@@ -172,16 +172,16 @@ ALTER TABLE emotion_cards DISABLE ROW LEVEL SECURITY;
 **빠른 해결**:
 ```bash
 # 1. 함수 문법 검사
-supabase functions serve generate-caption
+supabase functions serve analyze-and-suggest-style
 
 # 2. 로그 확인
-supabase functions logs generate-caption
+supabase functions logs analyze-and-suggest-style
 
 # 3. 환경 변수 확인
 supabase secrets list
 
 # 4. 개별 함수 배포
-supabase functions deploy generate-caption --no-verify-jwt
+supabase functions deploy analyze-and-suggest-style --no-verify-jwt
 ```
 
 **근본 원인**:
@@ -201,7 +201,7 @@ const controller = new AbortController();
 const timeoutId = setTimeout(() => controller.abort(), 60000);
 
 try {
-  const response = await fetch('/functions/v1/generate-caption', {
+  const response = await fetch('/functions/v1/analyze-and-suggest-style', {
     method: 'POST',
     body: JSON.stringify(data),
     signal: controller.signal
@@ -467,7 +467,7 @@ supabase secrets list
 supabase functions logs
 
 # 4. 개별 함수 배포
-supabase functions deploy generate-caption
+supabase functions deploy analyze-and-suggest-style
 ```
 
 ---
@@ -718,3 +718,4 @@ cat supabase/config.toml
 | 2025-01-14 | v2.0.0 | AI 최적화된 문제 해결 가이드로 완전 재작성 |
 | 2025-01-14 | v2.1.0 | 긴급 상황 대응 섹션 추가 |
 | 2025-01-14 | v2.2.0 | 성능 최적화 문제 해결 방법 추가 |
+| 2025-01-14 | v2.3.0 | 문서 동기화 및 최신 변경사항 반영 |

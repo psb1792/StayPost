@@ -65,8 +65,8 @@ StayPost는 감정 기반 펜션/숙박업소 SNS 콘텐츠 생성 플랫폼입�
 |-----------|--------|------|-----------|
 | `/api/health` | GET | 서버 상태 확인 | ❌ |
 | `/api/caption` | POST | 이미지 캡션 생성 | ✅ |
-| `/api/generate-caption` | POST | AI 캡션 생성 | ✅ |
-| `/api/generate-image-meta` | POST | 이미지 메타데이터 생성 | ✅ |
+| `/api/analyze-and-suggest-style` | POST | AI 이미지 분석 및 스타일 제안 | ✅ |
+| `/api/generate-final-caption` | POST | 최종 캡션 생성 | ✅ |
 | `/functions/check-slug-availability` | POST | 슬러그 중복 체크 | ✅ |
 | `/functions/create-store` | POST | 가게 생성 | ✅ |
 
@@ -351,34 +351,39 @@ Content-Type: application/json
 - `409`: 슬러그 중복
 - `500`: 서버 내부 오류
 
-### 4.3 감정 기반 캡션 생성
+### 4.3 AI 이미지 분석 및 스타일 제안
 
-#### POST /functions/v1/generate-caption
+#### POST /functions/v1/analyze-and-suggest-style
 
-감정과 템플릿을 기반으로 SNS 캡션을 생성합니다.
+이미지를 분석하여 AI가 콘텐츠 스타일을 자동으로 제안합니다.
 
 **요청:**
 ```http
-POST /functions/v1/generate-caption
+POST /functions/v1/analyze-and-suggest-style
 Content-Type: application/json
 ```
 
 **요청 본문:**
 ```json
 {
-  "emotion": "설렘",
-  "templateId": "default_universal",
-  "storeName": "My Guesthouse",
-  "placeDesc": "아늑한, 따뜻한, 편안한 카페 분위기"
+  "imageBase64": "base64_encoded_image_string"
 }
 ```
 
 **응답:**
 ```json
 {
-  "hook": "햇살이 머문 오후",
-  "caption": "통유리창으로 들어오는 빛, 오늘의 속도를 잠시 늦춰보세요.",
-  "hashtags": ["감성숙소", "스테이포스트", "여행기록"]
+  "styleProfile": {
+    "emotion": "평온",
+    "tone": "friendly",
+    "context": "marketing",
+    "rhythm": "medium",
+    "self_projection": "confident",
+    "vocab_color": {
+      "primary": "warm",
+      "secondary": "nature"
+    }
+  }
 }
 ```
 
@@ -407,15 +412,15 @@ Content-Type: application/json
 - `422`: 유효성 검사 오류
 - `500`: OpenAI 키 누락 또는 내부 오류
 
-### 4.4 이미지 메타데이터 생성
+### 4.4 최종 캡션 생성
 
-#### POST /functions/v1/generate-image-meta
+#### POST /functions/v1/generate-final-caption
 
-이미지를 분석하여 마케팅용 메타데이터를 생성합니다.
+확정된 스타일 프로필을 기반으로 최종 캡션을 생성합니다.
 
 **요청:**
 ```http
-POST /functions/v1/generate-image-meta
+POST /functions/v1/generate-final-caption
 Content-Type: application/json
 Authorization: Bearer <supabase_jwt_token>
 ```
@@ -423,17 +428,30 @@ Authorization: Bearer <supabase_jwt_token>
 **요청 본문:**
 ```json
 {
-  "imageBase64": "base64_encoded_image_string"
+  "imageUrl": "https://storage.supabase.co/emotion-cards/image.jpg",
+  "styleProfile": {
+    "emotion": "평온",
+    "tone": "friendly",
+    "context": "marketing",
+    "rhythm": "medium",
+    "self_projection": "confident",
+    "vocab_color": {
+      "primary": "warm",
+      "secondary": "nature"
+    }
+  }
 }
 ```
 
 **응답:**
 ```json
 {
-  "main_features": ["바다", "수영장", "노을", "산", "정원"],
-  "view_type": "오션뷰",
-  "emotions": ["감성 힐링", "럭셔리함", "여유로움"],
-  "hashtags": ["#제주도펜션", "#오션뷰숙소", "#풀빌라추천", "#감성숙소", "#커플여행"]
+  "caption": "따뜻한 아침, 커피 한 잔과 함께하는 평온한 시간 ☕️",
+  "hashtags": ["#펜션", "#아침", "#커피", "#평온", "#휴식"],
+  "seoMeta": {
+    "title": "코지 펜션 - 평온한 아침",
+    "keywords": ["펜션", "아침", "커피", "평온"]
+  }
 }
 ```
 
@@ -626,3 +644,4 @@ API 사용 중 문제가 발생하면 다음을 확인하세요:
 | 2025-01-14 | v1.0.0 | API 문서 초기 작성 |
 | 2025-01-14 | v1.1.0 | Supabase Edge Functions 추가 |
 | 2025-01-14 | v1.2.0 | 에러 코드 및 예시 추가 |
+| 2025-01-14 | v1.3.0 | 문서 동기화 및 최신 변경사항 반영 |
