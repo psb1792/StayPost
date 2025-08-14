@@ -205,10 +205,11 @@ const [error, setError] = useState<string | null>(null)
 ```typescript
 interface EmotionCanvasProps {
   imageUrl: string | null;           // 배경 이미지 URL
-  caption: string | null;            // 캡션 텍스트
+  caption: string | null;            // 캡션 텍스트 (상단 큰 한 줄)
+  pensionIntroduction?: string;      // 펜션 소개 문구 (하단)
   filter?: string | null;            // 이미지 필터
   topText?: CanvasTextBlock;         // 상단 텍스트 블록
-  bottomText?: CanvasTextBlock;      // 하단 텍스트 블록
+  bottomText?: CanvasTextBlock;      // 하단 텍스트 블록 (펜션 소개용)
 }
 ```
 
@@ -573,3 +574,4 @@ const [shareUrl, setShareUrl] = useState('')
 | 2025-01-14 | v1.1.0 | Step 컴포넌트 상세 설명 추가 |
 | 2025-01-14 | v1.2.0 | 공통 패턴 및 주의사항 추가 |
 | 2025-01-14 | v2.0.0 | 실제 코드 분석 기반 완전 재작성 |
+| 2025-01-14 | v2.1.0 | 문서 동기화 및 최신 변경사항 반영 |

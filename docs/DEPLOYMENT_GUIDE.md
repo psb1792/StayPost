@@ -215,6 +215,44 @@ supabase db diff --schema public
 # supabase/migrations/ 폴더에 새 마이그레이션 생성
 ```
 
+### 5단계: Supabase Auth 설정
+
+#### Google OAuth 활성화
+
+```bash
+# 1. Supabase 대시보드에서 Auth 설정
+# Authentication > Providers > Google
+
+# 2. Google Cloud Console에서 OAuth 2.0 클라이언트 ID 생성
+# https://console.cloud.google.com/apis/credentials
+
+# 3. OAuth 설정 정보 입력
+# Client ID: your_google_client_id
+# Client Secret: your_google_client_secret
+# Redirect URL: https://your-project.supabase.co/auth/v1/callback
+
+# 4. Google OAuth 활성화
+# Enable: true
+```
+
+#### 이메일/비밀번호 회원가입 설정
+
+```bash
+# 1. 이메일 템플릿 설정
+# Authentication > Email Templates
+
+# 2. 확인 이메일 템플릿 커스터마이징
+# Subject: "StayPost 계정 확인"
+# Content: 사용자 친화적인 이메일 내용
+
+# 3. 비밀번호 재설정 템플릿 커스터마이징
+# Subject: "StayPost 비밀번호 재설정"
+# Content: 안전한 비밀번호 재설정 링크
+
+# 4. 이메일 설정 확인
+# SMTP 설정 또는 Supabase 기본 이메일 서비스 사용
+```
+
 ## 🔧 환경 변수 설정
 
 ### 개발 환경 변수
@@ -473,3 +511,4 @@ node -e "console.log(process.env.VITE_SUPABASE_URL)"
 | 2025-01-14 | v2.0.0 | 완전히 새로운 배포 가이드 작성 |
 | 2025-01-14 | v2.1.0 | 단계별 상세 가이드 추가 |
 | 2025-01-14 | v2.2.0 | 문제 해결 섹션 및 체크리스트 추가 |
+| 2025-01-14 | v2.3.0 | 문서 동기화 및 최신 변경사항 반영 |

@@ -1,0 +1,9 @@
+ docs/AI_INTEGRATION.md     | 12 [32m+++++++++[m
+ docs/API_DOCUMENTATION.md  | 62 [32m++++++++++++++++++++++++++++++[m[31m----------------[m
+ docs/COMPONENT_GUIDE.md    |  5 [32m++[m[31m--[m
+ docs/DATABASE_SCHEMA.md    | 31 [32m+++++++++++++++++[m[31m------[m
+ docs/DEPLOYMENT_GUIDE.md   | 38 [32m++++++++++++++++++++++++++++[m
+ docs/MVP_SIMPLIFICATION.md |  6 [32m++[m[31m---[m
+ docs/STATE_MANAGEMENT.md   | 23 [32m+++++++++[m[31m--------[m
+ docs/TROUBLESHOOTING.md    | 10 [32m++++[m[31m----[m
+ 8 files changed, 137 insertions(+), 50 deletions(-)

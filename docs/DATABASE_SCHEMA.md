@@ -47,14 +47,17 @@ erDiagram
     
     store_profiles {
         UUID id PK
+        UUID user_id FK
         TEXT store_name
         TEXT store_slug UK
         TEXT intro
+        TEXT pension_introduction
         TEXT tone
         TEXT context
         TEXT rhythm
         TEXT self_projection
         JSONB vocab_color
+        JSONB default_style_profile
         TIMESTAMP created_at
         TIMESTAMP updated_at
     }
@@ -108,14 +111,17 @@ erDiagram
 ```sql
 CREATE TABLE store_profiles (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id uuid REFERENCES auth.users(id) ON DELETE CASCADE,
   store_name text NOT NULL,
   store_slug text UNIQUE NOT NULL,
   intro text,
+  pension_introduction text,
   tone text,
   context text,
   rhythm text,
   self_projection text,
   vocab_color jsonb,
+  default_style_profile jsonb,
   created_at timestamptz DEFAULT now(),
   updated_at timestamptz DEFAULT now()
 );
@@ -124,14 +130,17 @@ CREATE TABLE store_profiles (
 | 컬럼명 | 타입 | 제약조건 | 설명 |
 |--------|------|----------|------|
 | id | UUID | PRIMARY KEY | 고유 식별자 |
+| user_id | UUID | FOREIGN KEY | 사용자 ID (auth.users 참조) |
 | store_name | TEXT | NOT NULL | 가게명 |
 | store_slug | TEXT | UNIQUE, NOT NULL | 가게 슬러그 (URL용) |
 | intro | TEXT | - | 펜션 소개 문장 (프롬프트에 활용됨) |
+| pension_introduction | TEXT | - | 이미지 하단에 표시될 펜션 소개 글귀 |
 | tone | TEXT | - | 콘텐츠 톤 스타일 (friendly, professional, casual 등) |
 | context | TEXT | - | 콘텐츠 컨텍스트 스타일 (marketing, personal, informative 등) |
 | rhythm | TEXT | - | 콘텐츠 리듬 스타일 (short, medium, long 등) |
 | self_projection | TEXT | - | 자기 투영 스타일 (confident, humble, enthusiastic 등) |
 | vocab_color | JSONB | - | 어휘 색상 설정 (JSON 객체) |
+| default_style_profile | JSONB | - | 사용자 기본 콘텐츠 스타일 프로필 |
 | created_at | TIMESTAMPTZ | DEFAULT NOW() | 생성일시 |
 | updated_at | TIMESTAMPTZ | DEFAULT NOW() | 수정일시 |
 
@@ -310,19 +319,19 @@ CREATE POLICY "Allow public read access for slugs"
   TO public
   USING (true);
 
--- 인증된 사용자 삽입 정책
-CREATE POLICY "Allow authenticated users to create stores"
+-- 인증된 사용자 삽입 정책 (자신의 펜션만 생성 가능)
+CREATE POLICY "Allow authenticated users to create own stores"
   ON store_profiles
   FOR INSERT
   TO authenticated
-  WITH CHECK (true);
+  WITH CHECK (auth.uid() = user_id);
 
--- 인증된 사용자 수정 정책
-CREATE POLICY "Allow authenticated users to update stores"
+-- 인증된 사용자 수정 정책 (자신의 펜션만 수정 가능)
+CREATE POLICY "Allow authenticated users to update own stores"
   ON store_profiles
   FOR UPDATE
   TO authenticated
-  USING (true);
+  USING (auth.uid() = user_id);
 ```
 
 ### emotion_cards 테이블 RLS
@@ -482,23 +491,29 @@ supabase db push --include-all
 ```sql
 -- 가게 생성
 INSERT INTO store_profiles (
+  user_id,
   store_name, 
   store_slug, 
   intro, 
+  pension_introduction,
   tone, 
   context, 
   rhythm, 
   self_projection, 
-  vocab_color
+  vocab_color,
+  default_style_profile
 ) VALUES (
+  '550e8400-e29b-41d4-a716-446655440000',
   '코지 펜션',
   'cozy-pension',
   '자연 속에서 편안한 휴식을 즐기세요',
+  '자연 속에서 편안한 휴식을 즐기세요 🌿',
   'friendly',
   'marketing',
   'medium',
   'confident',
-  '{"primary": "warm", "secondary": "nature"}'
+  '{"primary": "warm", "secondary": "nature"}',
+  '{"emotion": "평온", "tone": "friendly", "context": "marketing", "rhythm": "medium", "self_projection": "confident"}'
 );
 
 -- 가게 조회
@@ -679,3 +694,10 @@ AND user_id != auth.uid();
 | 2025-01-03 | add_style_presets | store_profiles에 스타일 프리셋 추가 |
 | 2025-08-07 | add_intro | store_profiles에 intro 필드 추가 |
 | 2025-08-12 | add_emotion_cards_policies | emotion_cards RLS 정책 추가 |
+
+## 📋 Changelog
+
+| 날짜 | 버전 | 요약 |
+|------|------|------|
+| 2025-01-14 | v1.0.0 | 데이터베이스 스키마 문서 초기 작성 |
+| 2025-01-14 | v1.1.0 | 문서 동기화 및 최신 변경사항 반영 |
