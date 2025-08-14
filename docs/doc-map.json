@@ -1,0 +1,10 @@
+{
+  "mappings": [
+    { "globs": ["supabase/functions/**", "api/**"], "docs": ["docs/API_DOCUMENTATION.md", "docs/openapi.yaml"] },
+    { "globs": ["supabase/migrations/**", "supabase/seed/**", "supabase/**.sql"], "docs": ["docs/DATABASE_SCHEMA.md"] },
+    { "globs": ["src/components/**"], "docs": ["docs/COMPONENT_GUIDE.md"] },
+    { "globs": ["src/state/**", "src/store/**"], "docs": ["docs/STATE_MANAGEMENT.md"] },
+    { "globs": ["src/**", "supabase/**"], "docs": ["docs/ARCHITECTURE.md"] }
+  ],
+  "allow_skip_labels": ["docs-skip"]
+}
