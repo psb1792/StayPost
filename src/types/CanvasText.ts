@@ -7,3 +7,10 @@ export type CanvasTextBlock = {
   lineClamp?: number;     // 줄 수 제한
   withOutline?: boolean;  // 외곽선 그리기
 };
+
+// 최종 캡션 결과 타입
+export interface FinalCaptionResult {
+  hook: string;
+  caption: string;
+  hashtags: string[];
+}

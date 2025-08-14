@@ -22,9 +22,7 @@
 - [EmotionCanvas.tsx](#-emotioncanvastsx)
 - [Step1_Upload.tsx](#-step1_uploadtsx)
 - [Step2_Emotion.tsx](#-step2_emotiontsx)
-- [Step3_Canvas.tsx](#-step3_canvastsx)
-- [Step4_Meta.tsx](#-step4_metatsx)
-- [Step5_Export.tsx](#-step5_exporttsx)
+- [Step3_Result.tsx](#-step3_resulttsx)
 - [공통 패턴 및 특징](#-공통-패턴-및-특징)
 - [수정 시 주의사항](#-수정-시-주의사항)
 
@@ -40,9 +38,11 @@ src/components/
 └── steps/                  # 단계별 컴포넌트들
     ├── Step1_Upload.tsx    # 이미지 업로드
     ├── Step2_Emotion.tsx   # 감정 & 스타일 선택
-    ├── Step3_Canvas.tsx    # 캔버스 미리보기
-    ├── Step4_Meta.tsx      # SEO 설정
-    └── Step5_Export.tsx    # 다운로드 & 공유
+    ├── Step3_Result.tsx    # 결과 확인 & 다운로드
+    └── legacy/             # 이전 5단계 구조 (참고용)
+        ├── Step3_Canvas.tsx # 캔버스 미리보기
+        ├── Step4_Meta.tsx   # SEO 설정
+        └── Step5_Export.tsx # 다운로드 & 공유
 ```
 
 ---
@@ -62,7 +62,7 @@ interface StepWizardProps {
 ### State
 ```typescript
 // 전역 상태 (모든 Step에서 공유)
-const [step, setStep] = useState(0);                    // 현재 단계 (0-4)
+const [step, setStep] = useState(0);                    // 현재 단계 (0-2)
 const [uploadedImage, setUploadedImage] = useState<File | null>(null);
 const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 const [imageDescription, setImageDescription] = useState<string>(''); // 이미지 설명
@@ -80,10 +80,13 @@ const [seoMeta, setSeoMeta] = useState<{
 const [storeSlug, setStoreSlug] = useState<string>('default');
 const [hasExistingStore, setHasExistingStore] = useState<boolean>(false);
 const [selectedPreset, setSelectedPreset] = useState<StylePreset>(getDefaultPreset());
+  
+  // 새로운 스타일 분석 관련 상태
+  const [analyzedStyleProfile, setAnalyzedStyleProfile] = useState<StyleProfile | null>(null);
 ```
 
 ### 주요 함수들
-- `next()`: 다음 단계로 이동 (최대 4단계)
+- `next()`: 다음 단계로 이동 (최대 2단계)
 - `back()`: 이전 단계로 이동 (최소 0단계)
 - `checkExistingStores()`: 기존 가게 확인 (자동 Step 진행 방지)
 - `handleSignOut()`: 로그아웃 처리
@@ -235,6 +238,7 @@ type CanvasTextBlock = {
 ### 특징
 - Canvas API를 사용한 고성능 렌더링
 - 텍스트 자동 크기 조정 및 줄바꿈
+- 정확한 텍스트 중앙 정렬 (실제 텍스트 너비 측정)
 - 다양한 텍스트 스타일링 지원
 - forwardRef를 통한 외부 접근 가능
 - 800x800 고정 캔버스 크기
@@ -354,15 +358,16 @@ const templateOptions = [
 
 ---
 
-## 🖼️ Step3_Canvas.tsx
+## 🎯 Step3_Result.tsx
 
-**역할**: 감성 카드 캔버스 미리보기 및 저장을 처리하는 세 번째 단계
+**역할**: 결과 확인, SEO 설정, 다운로드 및 공유를 통합 처리하는 세 번째 단계
 
 ### Props
 ```typescript
-interface Step3CanvasProps {
+interface Step3ResultProps {
   previewUrl: string | null;
   generatedCaption: string;
+  finalCaption: {hook: string; caption: string; hashtags: string[]} | null;
   selectedEmotion: string;
   templateId: string;
   canvasUrl: string;
@@ -370,7 +375,13 @@ interface Step3CanvasProps {
   selectedPreset: StylePreset;
   storeSlug: string;
   setCardId: (cardId: string) => void;
-  next: () => void;
+  seoMeta: {
+    title: string;
+    keywords: string[];
+    hashtags: string[];
+    slug: string;
+  };
+  setSeoMeta: (seoMeta: any) => void;
   back: () => void;
 }
 ```
@@ -381,6 +392,14 @@ const [isGenerating, setIsGenerating] = useState(false)
 const [isSaving, setIsSaving] = useState(false)
 const [showPreview, setShowPreview] = useState(true)
 const [saveStatus, setSaveStatus] = useState<'idle' | 'success' | 'error'>('idle')
+const [copied, setCopied] = useState(false)
+const [shareUrl, setShareUrl] = useState('')
+const [cardId, setLocalCardId] = useState<string | null>(null)
+
+// Canvas 설정 상태
+const [topTextAlign, setTopTextAlign] = useState<'left' | 'center'>('left')
+const [bottomTextSize, setBottomTextSize] = useState(26)
+const [bottomTextAlign, setBottomTextAlign] = useState<'left' | 'center'>('left')
 ```
 
 ### 주요 함수들
@@ -388,107 +407,19 @@ const [saveStatus, setSaveStatus] = useState<'idle' | 'success' | 'error'>('idle
 - `downloadCanvas()`: 캔버스 이미지 다운로드
 - `handleSave()`: 감성 카드 데이터베이스 저장
 - `extractHookFromCaption(caption)`: 캡션에서 훅 추출
-
-### 특징
-- 실시간 캔버스 미리보기
-- 고품질 이미지 다운로드
-- 데이터베이스 저장 기능
-- 훅과 캡션 자동 분리
-- 저장 상태 관리
-
----
-
-## 🔍 Step4_Meta.tsx
-
-**역할**: SEO 메타데이터 설정을 처리하는 네 번째 단계
-
-### Props
-```typescript
-interface Step4MetaProps {
-  generatedCaption: string;
-  selectedEmotion: string;
-  templateId: string;
-  canvasUrl: string;
-  seoMeta: {
-    title: string;
-    keywords: string[];
-    hashtags: string[];
-    slug: string;
-  };
-  setSeoMeta: (meta: {
-    title: string;
-    keywords: string[];
-    hashtags: string[];
-    slug: string;
-  }) => void;
-  storeSlug: string;
-  setStoreSlug: (slug: string) => void;
-  selectedPreset: StylePreset;
-  next: () => void;
-  back: () => void;
-}
-```
-
-### State
-```typescript
-const [isSaving, setIsSaving] = useState(false)
-const [selectedStoreName, setSelectedStoreName] = useState<string>('')
-```
-
-### 주요 함수들
-- `loadSelectedStore()`: 선택된 가게 정보 로드
 - `generateSeoMetaHandler()`: SEO 메타데이터 자동 생성
-- `updateSeoMeta()`: SEO 메타데이터 업데이트
-
-### 특징
-- AI 기반 SEO 메타데이터 자동 생성
-- 수동 편집 가능
-- 가게별 설정 지원
-- 실시간 미리보기
-
----
-
-## 📤 Step5_Export.tsx
-
-**역할**: 최종 다운로드 및 공유 기능을 처리하는 마지막 단계
-
-### Props
-```typescript
-interface Step5ExportProps {
-  canvasUrl: string;
-  cardId: string;
-  generatedCaption: string;
-  selectedEmotion: string;
-  templateId: string;
-  seoMeta: {
-    title: string;
-    keywords: string[];
-    hashtags: string[];
-    slug: string;
-  };
-  storeSlug: string;
-  back: () => void;
-}
-```
-
-### State
-```typescript
-const [copied, setCopied] = useState(false)
-const [shareUrl, setShareUrl] = useState('')
-```
-
-### 주요 함수들
 - `handleDownloadImage()`: 이미지 다운로드
 - `copyToClipboard(text)`: 클립보드 복사
 - `shareOnSocial(platform)`: 소셜 미디어 공유
-- `handleCopyCaption()`: 캡션 복사
-- `handleNativeShare()`: 네이티브 공유 API 사용
 
 ### 특징
-- 다양한 소셜 미디어 공유 지원
-- 네이티브 공유 API 활용
-- 클립보드 복사 기능
-- 공유 URL 자동 생성
+- 3단계 구조로 통합 (기존 5단계에서 축약)
+- 실시간 캔버스 미리보기 및 설정
+- SEO 메타데이터 자동 생성 및 편집
+- 다운로드 및 공유 기능 통합
+- Canvas 텍스트 정렬 및 크기 조정
+- 훅과 캡션 자동 분리
+- 저장 상태 관리
 
 ---
 
@@ -575,3 +506,4 @@ const [shareUrl, setShareUrl] = useState('')
 | 2025-01-14 | v1.2.0 | 공통 패턴 및 주의사항 추가 |
 | 2025-01-14 | v2.0.0 | 실제 코드 분석 기반 완전 재작성 |
 | 2025-01-14 | v2.1.0 | 문서 동기화 및 최신 변경사항 반영 |
+| 2025-08-14 | v2.2.0 | Step 구조 단순화 (5단계 → 3단계) 및 컴포넌트 통합 |

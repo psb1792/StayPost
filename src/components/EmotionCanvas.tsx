@@ -134,9 +134,17 @@ const EmotionCanvas = forwardRef<HTMLCanvasElement, EmotionCanvasProps>(
           const maxW = (t.maxWidthPct ?? 0.9) * canvas.width / dpr;
           const fitted = fitOneLine(ctx, t.text, maxW, t.fontSize ?? 38);
           ctx.font = `800 ${fitted.size}px Pretendard, system-ui`;
-          const x = (t.align === 'center')
-            ? (canvas.width/dpr - maxW)/2
-            : canvas.width/dpr * 0.05;
+          
+          let x: number;
+          if (t.align === 'center') {
+            // 중앙 정렬: 텍스트의 실제 너비를 측정하여 정확한 중앙 위치 계산
+            const textWidth = ctx.measureText(fitted.text).width;
+            x = (canvas.width / dpr - textWidth) / 2;
+          } else {
+            // 왼쪽 정렬
+            x = canvas.width / dpr * 0.05;
+          }
+          
           const y = 24;
           drawOutlinedText(ctx, fitted.text, x, y, t.withOutline ?? true);
           console.log('✅ Top text drawn successfully');
@@ -157,7 +165,21 @@ const EmotionCanvas = forwardRef<HTMLCanvasElement, EmotionCanvasProps>(
           ctx.font = `${b.fontWeight ?? 600} ${b.fontSize ?? 26}px Pretendard, system-ui, sans-serif`;
           const maxW = (b.maxWidthPct ?? 0.9) * canvas.width / dpr;
           const lines = wrapText(ctx, b.text, maxW).slice(0, b.lineClamp ?? 3);
-          const x = (b.align === 'center') ? (canvas.width/dpr - maxW)/2 : canvas.width/dpr * 0.05;
+          
+          let x: number;
+          if (b.align === 'center') {
+            // 중앙 정렬: 가장 긴 줄의 너비를 기준으로 중앙 위치 계산
+            let maxLineWidth = 0;
+            for (const line of lines) {
+              const lineWidth = ctx.measureText(line).width;
+              maxLineWidth = Math.max(maxLineWidth, lineWidth);
+            }
+            x = (canvas.width / dpr - maxLineWidth) / 2;
+          } else {
+            // 왼쪽 정렬
+            x = canvas.width / dpr * 0.05;
+          }
+          
           let y = y0 + 16;
           for (const line of lines) {
             drawOutlinedText(ctx, line, x, y, b.withOutline ?? false);

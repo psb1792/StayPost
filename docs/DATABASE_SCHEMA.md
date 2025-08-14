@@ -694,6 +694,7 @@ AND user_id != auth.uid();
 | 2025-01-03 | add_style_presets | store_profiles에 스타일 프리셋 추가 |
 | 2025-08-07 | add_intro | store_profiles에 intro 필드 추가 |
 | 2025-08-12 | add_emotion_cards_policies | emotion_cards RLS 정책 추가 |
+| 2025-08-14 | add_store_profiles_fields_and_rls | store_profiles에 user_id, pension_introduction, default_style_profile 추가 및 RLS 정책 개선 |
 
 ## 📋 Changelog
 
@@ -701,3 +702,4 @@ AND user_id != auth.uid();
 |------|------|------|
 | 2025-01-14 | v1.0.0 | 데이터베이스 스키마 문서 초기 작성 |
 | 2025-01-14 | v1.1.0 | 문서 동기화 및 최신 변경사항 반영 |
+| 2025-08-14 | v1.2.0 | store_profiles 테이블 필드 추가 및 RLS 정책 개선 |
