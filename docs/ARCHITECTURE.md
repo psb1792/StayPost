@@ -28,18 +28,67 @@ flowchart LR
 
 ## 🔄 핵심 데이터 플로우
 
+### 감정 카드 생성 시퀀스
+
 ```mermaid
 sequenceDiagram
-  actor Owner as Pension Owner
-  participant FE as Frontend (Vite/React)
-  participant SB as Supabase (Auth/DB/Storage)
-  participant OF as Edge Function (generate-caption)
+    actor User as 사용자
+    participant FE as Frontend (React)
+    participant SB as Supabase (Auth/DB/Storage)
+    participant EF as Edge Function
+    participant AI as OpenAI GPT-4o
 
-  Owner->>FE: 이미지 업로드
-  FE->>SB: Storage put(emotion-cards/{cleanSlug}/{ts}.png)
-  FE->>OF: POST /generate-caption (JWT)
-  OF->>SB: INSERT emotion_cards (RLS: auth.uid() = user_id)
-  FE->>SB: INSERT seo_meta / variants ...
+    User->>FE: 이미지 업로드
+    FE->>SB: Storage.put(emotion-cards/{slug}/{timestamp}.png)
+    SB-->>FE: 이미지 URL 반환
+    
+    User->>FE: 감정 & 스타일 선택
+    FE->>EF: POST /generate-caption (JWT + 이미지URL + 감정)
+    EF->>AI: 프롬프트 전송
+    AI-->>EF: 캡션 생성 결과
+    EF->>SB: INSERT emotion_cards (RLS 적용)
+    SB-->>EF: 카드 ID 반환
+    EF-->>FE: 생성된 캡션 반환
+    
+    User->>FE: SEO 메타데이터 설정
+    FE->>EF: POST /generate-image-meta (JWT + 캡션)
+    EF->>AI: SEO 프롬프트 전송
+    AI-->>EF: SEO 메타데이터 생성
+    EF->>SB: UPDATE emotion_cards (SEO 정보)
+    EF-->>FE: SEO 메타데이터 반환
+    
+    User->>FE: 최종 다운로드
+    FE->>SB: SELECT emotion_cards (카드 정보 조회)
+    SB-->>FE: 완성된 카드 데이터
+    FE-->>User: 이미지 다운로드 제공
+```
+
+### 가게 생성 시퀀스
+
+```mermaid
+sequenceDiagram
+    actor User as 사용자
+    participant FE as Frontend (React)
+    participant EF as Edge Function
+    participant DB as Supabase Database
+
+    User->>FE: 가게명 입력
+    FE->>EF: POST /check-slug-availability (슬러그)
+    EF->>DB: SELECT store_profiles (중복 체크)
+    DB-->>EF: 사용 가능 여부
+    EF-->>FE: 슬러그 상태 반환
+    
+    alt 슬러그 사용 가능
+        User->>FE: 가게 생성 확인
+        FE->>EF: POST /create-store (가게 정보)
+        EF->>DB: INSERT store_profiles (RLS 적용)
+        DB-->>EF: 가게 ID 반환
+        EF-->>FE: 생성된 가게 정보
+        FE-->>User: 가게 생성 완료
+    else 슬러그 중복
+        EF-->>FE: 대안 슬러그 제안
+        FE-->>User: 슬러그 변경 요청
+    end
 ```
 
 ## 🎯 핵심 기술 스택
@@ -103,11 +152,33 @@ Step 5: 다운로드 & 공유
 ### 3. AI 처리 플로우
 ```
 1. 사용자 입력 (감정 + 템플릿 + 이미지 설명)
-2. OpenAI GPT-4o API 호출
+2. fn.generate_caption API 호출
 3. 프롬프트 엔지니어링으로 최적화된 캡션 생성
 4. 결과 반환 (캡션 + 해시태그)
 5. 에러 처리 및 fallback 메시지
 ```
+
+## 🏷️ 정규 ID 체계
+
+### 엔티티 ID
+- `entity.store_profile`: 가게 프로필 엔티티
+- `entity.emotion_card`: 감정 카드 엔티티
+- `entity.reservation`: 예약 엔티티
+
+### 테이블 ID
+- `table.store_profiles`: 가게 프로필 테이블
+- `table.emotion_cards`: 감정 카드 테이블
+- `table.reservations`: 예약 테이블
+
+### 함수 ID
+- `fn.generate_caption`: 캡션 생성 함수
+- `fn.generate_image_meta`: 이미지 메타데이터 생성 함수
+- `fn.check_slug_availability`: 슬러그 중복 체크 함수
+- `fn.create_store`: 가게 생성 함수
+
+### 스토리지 ID
+- `storage.emotion_cards`: 감정 카드 이미지 스토리지
+- `storage.store_logos`: 가게 로고 스토리지
 
 ## 🗂️ 주요 컴포넌트 구조
 

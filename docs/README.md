@@ -1,3 +1,14 @@
+{
+  "doc_meta": {
+    "id": "DOCS-001",
+    "version": "2025-08-14",
+    "owners": ["pablo"],
+    "scope": ["documentation", "guide", "overview"],
+    "status": "active",
+    "related": ["ARCH-001", "API-001", "DB-001", "COMP-001"]
+  }
+}
+
 # StayPost 문서 가이드
 
 이 폴더는 StayPost 프로젝트의 모든 기술 문서를 포함합니다. 다른 AI나 개발자가 프로젝트를 쉽게 이해하고 기여할 수 있도록 체계적으로 정리되어 있습니다.
