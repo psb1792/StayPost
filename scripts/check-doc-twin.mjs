@@ -1,6 +1,6 @@
 import { execSync } from "node:child_process";
 import { readFileSync } from "node:fs";
-import minimatch from "minimatch";
+import { minimatch } from "minimatch";
 
 const baseRef = process.env.BASE_REF || "origin/main";
 
