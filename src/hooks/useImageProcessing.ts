@@ -72,21 +72,26 @@ export default function useImageProcessing(): UseImageProcessingReturn {
       setProgress('Analyzing image with AI...');
       const imageBase64 = await convertFileToBase64(imageFile);
       
-      const metaResponse = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-image-meta`, {
-        method: 'POST',
-        mode: 'cors',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-        },
-        body: JSON.stringify({ imageBase64 }),
-      });
+      // 사용자 세션 확인
+      const { data: { session } } = await supabase.auth.getSession();
+      const accessToken = session?.access_token;
 
-      if (!metaResponse.ok) {
-        throw new Error('Failed to analyze image metadata');
+      if (!accessToken) {
+        throw new Error('로그인이 필요합니다.');
       }
 
-      const imageMeta: ImageMetadata = await metaResponse.json();
+      const { data: imageMeta, error: metaError } = await supabase.functions.invoke('generate-image-meta', {
+        body: { imageBase64 },
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+
+      if (metaError) {
+        throw new Error(`Failed to analyze image metadata: ${metaError.message}`);
+      }
+
+      if (!imageMeta) {
+        throw new Error('No metadata received from the server');
+      }
 
       // Step 3: Generate StayPost content based on metadata
       setProgress('Generating StayPost content...');
@@ -134,7 +139,7 @@ export default function useImageProcessing(): UseImageProcessingReturn {
         method: 'POST',
         mode: 'cors',
         headers: {
-          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+          'Authorization': `Bearer ${accessToken}`,
         },
         body: formData,
       });
