@@ -1,10 +1,11 @@
 {
   "doc_meta": {
     "id": "MVP-001",
-    "version": "2025-01-14",
+    "version": "2025-08-14",
     "owners": ["pablo"],
     "scope": ["frontend", "backend", "architecture"],
-    "related": ["ARCH-001", "COMP-001"]
+    "status": "active",
+    "related": ["ARCH-001", "COMP-001", "STATE-001"]
   }
 }
 

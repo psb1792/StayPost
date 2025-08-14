@@ -1,10 +1,11 @@
 {
   "doc_meta": {
     "id": "FUTURE-001",
-    "version": "2025-01-14",
+    "version": "2025-08-14",
     "owners": ["pablo"],
     "scope": ["roadmap", "planning", "features"],
-    "related": ["ARCH-001", "MVP-001"]
+    "status": "active",
+    "related": ["ARCH-001", "MVP-001", "COMP-001"]
   }
 }
 

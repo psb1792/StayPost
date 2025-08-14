@@ -1,10 +1,11 @@
 {
   "doc_meta": {
     "id": "API-001",
-    "version": "2025-01-14",
+    "version": "2025-08-14",
     "owners": ["pablo"],
     "scope": ["api", "edge-functions", "supabase"],
-    "related": ["ARCH-001", "DB-001"]
+    "status": "active",
+    "related": ["ARCH-001", "DB-001", "COMP-001"]
   }
 }
 
@@ -56,6 +57,18 @@ StayPost는 감정 기반 펜션/숙박업소 SNS 콘텐츠 생성 플랫폼입�
 - **Local Development**: `http://localhost:5001`
 - **Content Type**: `application/json`
 - **Authentication**: Supabase JWT Token (Authorization 헤더)
+- **OpenAPI 스펙**: [openapi.yaml](./openapi.yaml) - 완전한 API 스펙 참조
+
+## 📋 API 요약표
+
+| 엔드포인트 | 메서드 | 설명 | 인증 필요 |
+|-----------|--------|------|-----------|
+| `/api/health` | GET | 서버 상태 확인 | ❌ |
+| `/api/caption` | POST | 이미지 캡션 생성 | ✅ |
+| `/api/generate-caption` | POST | AI 캡션 생성 | ✅ |
+| `/api/generate-image-meta` | POST | 이미지 메타데이터 생성 | ✅ |
+| `/functions/check-slug-availability` | POST | 슬러그 중복 체크 | ✅ |
+| `/functions/create-store` | POST | 가게 생성 | ✅ |
 
 ## 인증 방법
 
@@ -139,6 +152,43 @@ const response = await fetch('/api/caption', {
 
 const data = await response.json();
 console.log(data.captions);
+```
+
+**예시 (curl):**
+```bash
+curl -X POST http://localhost:5001/api/caption \
+  -F "images=@/path/to/image.jpg"
+```
+
+**예시 (TypeScript):**
+```typescript
+interface CaptionResponse {
+  captions: string[];
+}
+
+const generateCaption = async (imageFile: File): Promise<CaptionResponse> => {
+  const formData = new FormData();
+  formData.append('images', imageFile);
+  
+  const response = await fetch('/api/caption', {
+    method: 'POST',
+    body: formData
+  });
+  
+  if (!response.ok) {
+    throw new Error(`HTTP error! status: ${response.status}`);
+  }
+  
+  return response.json();
+};
+```
+
+**실패 케이스 예시:**
+```json
+{
+  "error": "no-file",
+  "message": "이미지 파일이 제공되지 않았습니다."
+}
 ```
 
 ---
