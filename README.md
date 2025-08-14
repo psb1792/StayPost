@@ -71,11 +71,19 @@ npm run dev
 npm run build
 ```
 
+## 📚 문서
+
+프로젝트의 상세한 기술 문서는 [`/docs`](./docs/) 폴더에서 확인할 수 있습니다:
+
+- **[📖 문서 가이드](./docs/README.md)** - 전체 문서 구조 및 읽기 가이드
+- **[🏗️ 시스템 아키텍처](./docs/ARCHITECTURE.md)** - 전체 시스템 구조
+- **[🔧 API 문서](./docs/API_DOCUMENTATION.md)** - API 엔드포인트 스펙
+- **[🚀 배포 가이드](./docs/DEPLOYMENT_GUIDE.md)** - 개발/배포 환경 설정
+
 ## 기술 스택
 
 - **Frontend**: React, TypeScript, Tailwind CSS
-- **API**: Next.js API Routes
-- **AI**: OpenAI GPT-4o API
+- **API**: Express.js, OpenAI GPT-4o API
 - **Database**: Supabase
 - **Build Tool**: Vite
 
