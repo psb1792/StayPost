@@ -4,7 +4,7 @@ info:
   description: |
     StayPost는 감정 기반 펜션/숙박업소 SNS 콘텐츠 생성 플랫폼입니다.
     이 API는 이미지 분석, 캡션 생성, 메타데이터 생성 등의 기능을 제공합니다.
-  version: 1.0.0
+  version: 1.1.0
   contact:
     name: StayPost Team
     email: support@staypost.com

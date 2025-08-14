@@ -104,6 +104,18 @@ export interface AIServiceRequest {
   };
 }
 
+export interface StyleProfile {
+  emotion: string;
+  tone: string;
+  context: string;
+  rhythm: string;
+  self_projection: string;
+  vocab_color: {
+    primary: string;
+    secondary: string;
+  };
+}
+
 export interface AIServiceResponse {
   content: string;
   usage?: {
@@ -1305,6 +1317,7 @@ export class AIMonitor {
 | 2025-01-14 | v2.1.0 | Anthropic, Google AI 지원 추가 |
 | 2025-01-14 | v2.2.0 | Fallback 메커니즘 및 비용 관리 시스템 추가 |
 | 2025-01-14 | v2.3.0 | 모니터링 및 로깅 시스템 추가 |
+| 2025-01-14 | v2.4.0 | 문서 동기화 및 최신 변경사항 반영 |
 
 ## 🔮 향후 계획
 
