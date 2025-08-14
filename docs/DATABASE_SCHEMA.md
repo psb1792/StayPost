@@ -1,7 +1,7 @@
 {
   "doc_meta": {
     "id": "DB-001",
-    "version": "2025-01-14",
+    "version": "2025-01-15",
     "owners": ["pablo"],
     "scope": ["database", "supabase", "postgresql"],
     "status": "active",
@@ -41,7 +41,6 @@ StayPost는 Supabase를 기반으로 한 PostgreSQL 데이터베이스를 사용
 erDiagram
     auth.users ||--o{ store_profiles : "owns"
     auth.users ||--o{ emotion_cards : "creates"
-    auth.users ||--o{ processed_images : "uploads"
     store_profiles ||--o{ emotion_cards : "has"
     store_profiles ||--o{ reservations : "receives"
     
@@ -52,11 +51,6 @@ erDiagram
         TEXT store_slug UK
         TEXT intro
         TEXT pension_introduction
-        TEXT tone
-        TEXT context
-        TEXT rhythm
-        TEXT self_projection
-        JSONB vocab_color
         JSONB default_style_profile
         TIMESTAMP created_at
         TIMESTAMP updated_at
@@ -64,7 +58,6 @@ erDiagram
     
     emotion_cards {
         UUID id PK
-        UUID user_id FK
         TEXT image_url
         TEXT caption
         TEXT emotion
@@ -111,19 +104,14 @@ erDiagram
 ```sql
 CREATE TABLE store_profiles (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id uuid REFERENCES auth.users(id) ON DELETE CASCADE,
+  user_id uuid REFERENCES auth.users(id),
   store_name text NOT NULL,
   store_slug text UNIQUE NOT NULL,
   intro text,
   pension_introduction text,
-  tone text,
-  context text,
-  rhythm text,
-  self_projection text,
-  vocab_color jsonb,
-  default_style_profile jsonb,
-  created_at timestamptz DEFAULT now(),
-  updated_at timestamptz DEFAULT now()
+  default_style_profile jsonb DEFAULT '{}'::jsonb,
+  created_at timestamptz DEFAULT timezone('utc'::text, now()),
+  updated_at timestamptz DEFAULT timezone('utc'::text, now())
 );
 ```
 
@@ -135,12 +123,7 @@ CREATE TABLE store_profiles (
 | store_slug | TEXT | UNIQUE, NOT NULL | 가게 슬러그 (URL용) |
 | intro | TEXT | - | 펜션 소개 문장 (프롬프트에 활용됨) |
 | pension_introduction | TEXT | - | 이미지 하단에 표시될 펜션 소개 글귀 |
-| tone | TEXT | - | 콘텐츠 톤 스타일 (friendly, professional, casual 등) |
-| context | TEXT | - | 콘텐츠 컨텍스트 스타일 (marketing, personal, informative 등) |
-| rhythm | TEXT | - | 콘텐츠 리듬 스타일 (short, medium, long 등) |
-| self_projection | TEXT | - | 자기 투영 스타일 (confident, humble, enthusiastic 등) |
-| vocab_color | JSONB | - | 어휘 색상 설정 (JSON 객체) |
-| default_style_profile | JSONB | - | 사용자 기본 콘텐츠 스타일 프로필 |
+| default_style_profile | JSONB | DEFAULT '{}' | 사용자 기본 콘텐츠 스타일 프로필 |
 | created_at | TIMESTAMPTZ | DEFAULT NOW() | 생성일시 |
 | updated_at | TIMESTAMPTZ | DEFAULT NOW() | 수정일시 |
 
@@ -151,21 +134,19 @@ CREATE TABLE store_profiles (
 ```sql
 CREATE TABLE emotion_cards (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id uuid REFERENCES auth.users(id) ON DELETE CASCADE,
   image_url text NOT NULL,
   caption text NOT NULL,
   emotion text,
   template_id text,
   store_slug text,
   seo_meta jsonb,
-  created_at timestamptz DEFAULT timezone('utc', now())
+  created_at timestamp with time zone DEFAULT timezone('utc', now())
 );
 ```
 
 | 컬럼명 | 타입 | 제약조건 | 설명 |
 |--------|------|----------|------|
 | id | UUID | PRIMARY KEY | 고유 식별자 |
-| user_id | UUID | FOREIGN KEY | 사용자 ID (auth.users 참조) |
 | image_url | TEXT | NOT NULL | 이미지 URL |
 | caption | TEXT | NOT NULL | 생성된 캡션 |
 | emotion | TEXT | - | 선택된 감정 |
@@ -248,9 +229,9 @@ CREATE TABLE reservations (
 
 ### 외래 키 관계
 
-1. **emotion_cards.user_id → auth.users.id**
-   - 감정 카드는 특정 사용자가 소유
-   - CASCADE 삭제: 사용자 삭제 시 관련 카드도 삭제
+1. **store_profiles.user_id → auth.users.id**
+   - 가게 프로필은 특정 사용자가 소유
+   - 사용자 삭제 시 관련 가게 정보도 삭제
 
 2. **emotion_cards.store_slug → store_profiles.store_slug**
    - 감정 카드는 특정 가게에 연결
@@ -264,7 +245,6 @@ CREATE TABLE reservations (
 
 - `store_profiles.store_slug`: UNIQUE 제약조건으로 중복 방지
 - `reservations.person_count`: CHECK 제약조건으로 0보다 큰 값만 허용
-- `emotion_cards.user_id`: CASCADE 삭제로 데이터 무결성 보장
 
 ## 인덱스
 
@@ -299,7 +279,7 @@ ALTER TABLE store_profiles ADD CONSTRAINT store_profiles_store_slug_key
 ### 암시적 제약 조건
 
 - 모든 테이블의 `id` 컬럼: PRIMARY KEY 제약조건
-- `emotion_cards.user_id`: FOREIGN KEY 제약조건 (CASCADE 삭제)
+- `store_profiles.user_id`: FOREIGN KEY 제약조건
 - `emotion_cards.image_url`, `emotion_cards.caption`: NOT NULL 제약조건
 - `processed_images.original_url`, `processed_images.file_name`, `processed_images.file_size`, `processed_images.mime_type`: NOT NULL 제약조건
 - `reservations.store_slug`, `reservations.date`, `reservations.time`, `reservations.person_count`, `reservations.name`, `reservations.phone`: NOT NULL 제약조건
@@ -313,21 +293,21 @@ ALTER TABLE store_profiles ADD CONSTRAINT store_profiles_store_slug_key
 ALTER TABLE store_profiles ENABLE ROW LEVEL SECURITY;
 
 -- 공개 읽기 정책 (슬러그 확인용)
-CREATE POLICY "Allow public read access for slugs"
+CREATE POLICY "store_profiles_select_all"
   ON store_profiles
   FOR SELECT
-  TO public
+  TO anon, authenticated
   USING (true);
 
--- 인증된 사용자 삽입 정책 (자신의 펜션만 생성 가능)
-CREATE POLICY "Allow authenticated users to create own stores"
+-- 인증된 사용자 삽입 정책 (자신의 가게만 생성 가능)
+CREATE POLICY "store_profiles_insert_own"
   ON store_profiles
   FOR INSERT
   TO authenticated
   WITH CHECK (auth.uid() = user_id);
 
--- 인증된 사용자 수정 정책 (자신의 펜션만 수정 가능)
-CREATE POLICY "Allow authenticated users to update own stores"
+-- 인증된 사용자 수정 정책 (자신의 가게만 수정 가능)
+CREATE POLICY "store_profiles_update_own"
   ON store_profiles
   FOR UPDATE
   TO authenticated
@@ -340,33 +320,26 @@ CREATE POLICY "Allow authenticated users to update own stores"
 -- RLS 활성화
 ALTER TABLE emotion_cards ENABLE ROW LEVEL SECURITY;
 
--- 사용자별 읽기 정책
-CREATE POLICY "select_own_emotion_cards"
+-- 공개 읽기 정책 (데모용)
+CREATE POLICY "Allow public read access on emotion_cards"
   ON emotion_cards
   FOR SELECT
-  TO authenticated
-  USING (auth.uid() = user_id);
+  TO public
+  USING (true);
 
--- 사용자별 삽입 정책
-CREATE POLICY "insert_own_emotion_card"
+-- 공개 삽입 정책 (데모용)
+CREATE POLICY "Allow public insert on emotion_cards"
   ON emotion_cards
   FOR INSERT
-  TO authenticated
-  WITH CHECK (auth.uid() = user_id);
+  TO public
+  WITH CHECK (true);
 
--- 사용자별 수정 정책
-CREATE POLICY "update_own_emotion_card"
+-- 공개 수정 정책 (데모용)
+CREATE POLICY "Allow public update on emotion_cards"
   ON emotion_cards
   FOR UPDATE
-  TO authenticated
-  USING (auth.uid() = user_id);
-
--- 사용자별 삭제 정책
-CREATE POLICY "delete_own_emotion_card"
-  ON emotion_cards
-  FOR DELETE
-  TO authenticated
-  USING (auth.uid() = user_id);
+  TO public
+  USING (true);
 ```
 
 ### processed_images 테이블 RLS
@@ -460,15 +433,18 @@ CREATE OR REPLACE TRIGGER update_reservations_updated_at
 
 ```
 supabase/migrations/
-├── 20250706121336_damp_pebble.sql          # processed_images 테이블 생성
-├── 20250706122155_silver_marsh.sql         # processed_images에 콘텐츠 필드 추가
-├── 20250724090704_heavy_torch.sql          # store_profiles 테이블 생성
-├── 20250730180000_create_emotion_cards.sql # emotion_cards 테이블 생성
-├── 20250731_add_seo_meta_to_emotion_cards.sql # emotion_cards에 SEO 메타 추가
-├── 20250101000000_create_reservations_table.sql # reservations 테이블 생성
-├── 20250103000000_add_style_presets_to_store_profiles.sql # 스타일 프리셋 추가
-├── 20250807_add_intro_to_store_profiles.sql # store_profiles에 intro 추가
-└── 20250812090755_add_emotion_cards_policies.sql # emotion_cards RLS 정책
+├── 20240101000000_create_store_profiles_table.sql          # store_profiles 테이블 생성
+├── 20250101000000_create_reservations_table.sql           # reservations 테이블 생성
+├── 20250102000000_update_store_profiles_rls.sql          # store_profiles RLS 정책 업데이트
+├── 20250103000000_add_style_presets_to_store_profiles.sql # store_profiles에 스타일 프리셋 추가
+├── 20250706121336_damp_pebble.sql                        # processed_images 테이블 생성
+├── 20250706122155_silver_marsh.sql                       # processed_images에 콘텐츠 필드 추가
+├── 20250724090704_heavy_torch.sql                        # store_profiles 테이블 업데이트
+├── 20250730180000_create_emotion_cards.sql               # emotion_cards 테이블 생성
+├── 20250731_add_seo_meta_to_emotion_cards.sql            # emotion_cards에 SEO 메타 추가
+├── 20250807_add_intro_to_store_profiles.sql              # store_profiles에 intro 추가
+├── 20250812090755_add_emotion_cards_policies.sql         # emotion_cards RLS 정책
+└── 20250814185450_add_store_profiles_fields_and_rls.sql  # store_profiles 필드 추가 및 RLS 개선
 ```
 
 ### 마이그레이션 실행
@@ -496,11 +472,6 @@ INSERT INTO store_profiles (
   store_slug, 
   intro, 
   pension_introduction,
-  tone, 
-  context, 
-  rhythm, 
-  self_projection, 
-  vocab_color,
   default_style_profile
 ) VALUES (
   '550e8400-e29b-41d4-a716-446655440000',
@@ -508,11 +479,6 @@ INSERT INTO store_profiles (
   'cozy-pension',
   '자연 속에서 편안한 휴식을 즐기세요',
   '자연 속에서 편안한 휴식을 즐기세요 🌿',
-  'friendly',
-  'marketing',
-  'medium',
-  'confident',
-  '{"primary": "warm", "secondary": "nature"}',
   '{"emotion": "평온", "tone": "friendly", "context": "marketing", "rhythm": "medium", "self_projection": "confident"}'
 );
 
@@ -522,8 +488,7 @@ WHERE store_slug = 'cozy-pension';
 
 -- 스타일 설정 업데이트
 UPDATE store_profiles 
-SET tone = 'professional', 
-    vocab_color = '{"primary": "elegant", "secondary": "luxury"}'
+SET default_style_profile = '{"emotion": "설렘", "tone": "professional"}'
 WHERE store_slug = 'cozy-pension';
 ```
 
@@ -532,7 +497,6 @@ WHERE store_slug = 'cozy-pension';
 ```sql
 -- 감정 카드 생성
 INSERT INTO emotion_cards (
-  user_id,
   image_url, 
   caption, 
   emotion, 
@@ -540,7 +504,6 @@ INSERT INTO emotion_cards (
   store_slug,
   seo_meta
 ) VALUES (
-  '550e8400-e29b-41d4-a716-446655440000',
   'https://storage.supabase.co/emotion-cards/cozy-pension/20250114_123456.jpg',
   '따뜻한 아침, 커피 한 잔과 함께하는 평온한 시간 ☕️',
   '평온',
@@ -552,12 +515,6 @@ INSERT INTO emotion_cards (
     "hashtags": ["#펜션", "#아침", "#커피", "#평온"]
   }'
 );
-
--- 사용자별 감정 카드 조회
-SELECT caption, emotion, created_at 
-FROM emotion_cards 
-WHERE user_id = '550e8400-e29b-41d4-a716-446655440000'
-ORDER BY created_at DESC;
 
 -- 가게별 감정 카드 조회
 SELECT caption, emotion, seo_meta->>'title' as seo_title
@@ -664,34 +621,29 @@ VALUES ('다른 펜션', 'cozy-pension');
 INSERT INTO reservations (store_slug, date, time, person_count, name, phone) 
 VALUES ('cozy-pension', '2025-02-14', '18:00:00', 0, '김철수', '010-1234-5678');
 -- ERROR: new row for relation "reservations" violates check constraint "check_person_count"
-
--- 다른 사용자의 감정 카드 수정 시도 (실패 - RLS)
-UPDATE emotion_cards 
-SET caption = '수정된 캡션'
-WHERE id = '550e8400-e29b-41d4-a716-446655440000' 
-AND user_id != auth.uid();
--- ERROR: new row violates row-level security policy
 ```
 
 ## 📝 주의사항
 
 1. **RLS 정책**: 모든 테이블에 Row Level Security가 활성화되어 있어 사용자별 데이터 접근이 제한됩니다.
-2. **외래 키 제약**: `emotion_cards.user_id`는 CASCADE 삭제로 설정되어 있어 사용자 삭제 시 관련 데이터가 자동 삭제됩니다.
-3. **공개 접근**: `processed_images`와 `reservations` 테이블은 데모/예약 목적으로 공개 접근이 허용됩니다.
-4. **자동 업데이트**: `updated_at` 컬럼은 트리거를 통해 자동으로 업데이트됩니다.
-5. **인덱스**: 자주 조회되는 컬럼에 인덱스가 생성되어 성능을 최적화합니다.
+2. **공개 접근**: `emotion_cards`와 `processed_images` 테이블은 데모 목적으로 공개 접근이 허용됩니다.
+3. **자동 업데이트**: `updated_at` 컬럼은 트리거를 통해 자동으로 업데이트됩니다.
+4. **인덱스**: 자주 조회되는 컬럼에 인덱스가 생성되어 성능을 최적화합니다.
+5. **JSONB 활용**: `seo_meta`와 `default_style_profile` 필드에서 JSONB를 활용하여 유연한 데이터 구조를 지원합니다.
 
 ## 🔄 스키마 변경 이력
 
 | 날짜 | 마이그레이션 | 변경 내용 |
 |------|-------------|----------|
+| 2024-01-01 | create_store_profiles_table | store_profiles 테이블 생성 |
+| 2025-01-01 | create_reservations_table | reservations 테이블 생성 |
+| 2025-01-02 | update_store_profiles_rls | store_profiles RLS 정책 업데이트 |
+| 2025-01-03 | add_style_presets | store_profiles에 스타일 프리셋 추가 |
 | 2025-07-06 | damp_pebble | processed_images 테이블 생성 |
 | 2025-07-06 | silver_marsh | processed_images에 콘텐츠 필드 추가 |
-| 2025-07-24 | heavy_torch | store_profiles 테이블 생성 |
+| 2025-07-24 | heavy_torch | store_profiles 테이블 업데이트 |
 | 2025-07-30 | create_emotion_cards | emotion_cards 테이블 생성 |
 | 2025-07-31 | add_seo_meta | emotion_cards에 SEO 메타 추가 |
-| 2025-01-01 | create_reservations | reservations 테이블 생성 |
-| 2025-01-03 | add_style_presets | store_profiles에 스타일 프리셋 추가 |
 | 2025-08-07 | add_intro | store_profiles에 intro 필드 추가 |
 | 2025-08-12 | add_emotion_cards_policies | emotion_cards RLS 정책 추가 |
 | 2025-08-14 | add_store_profiles_fields_and_rls | store_profiles에 user_id, pension_introduction, default_style_profile 추가 및 RLS 정책 개선 |
@@ -700,6 +652,5 @@ AND user_id != auth.uid();
 
 | 날짜 | 버전 | 요약 |
 |------|------|------|
-| 2025-01-14 | v1.0.0 | 데이터베이스 스키마 문서 초기 작성 |
-| 2025-01-14 | v1.1.0 | 문서 동기화 및 최신 변경사항 반영 |
-| 2025-08-14 | v1.2.0 | store_profiles 테이블 필드 추가 및 RLS 정책 개선 |
+| 2025-01-15 | v1.0.0 | 데이터베이스 스키마 문서 초기 작성 |
+| 2025-01-15 | v1.1.0 | 문서 동기화 및 최신 변경사항 반영 |

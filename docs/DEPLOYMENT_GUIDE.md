@@ -1,7 +1,7 @@
 {
   "doc_meta": {
     "id": "DEPLOY-001",
-    "version": "2025-01-14",
+    "version": "2025-01-15",
     "owners": ["pablo"],
     "scope": ["deployment", "netlify", "supabase"],
     "status": "active",
@@ -196,8 +196,9 @@ supabase migration list
 supabase functions deploy
 
 # 2. 특정 함수만 배포
-supabase functions deploy generate-caption
+supabase functions deploy generate-final-caption
 supabase functions deploy generate-image-meta
+supabase functions deploy analyze-and-suggest-style
 supabase functions deploy create-store
 supabase functions deploy check-slug-availability
 
@@ -508,7 +509,7 @@ node -e "console.log(process.env.VITE_SUPABASE_URL)"
 
 | 날짜 | 버전 | 변경사항 |
 |------|------|----------|
-| 2025-01-14 | v2.0.0 | 완전히 새로운 배포 가이드 작성 |
-| 2025-01-14 | v2.1.0 | 단계별 상세 가이드 추가 |
-| 2025-01-14 | v2.2.0 | 문제 해결 섹션 및 체크리스트 추가 |
-| 2025-01-14 | v2.3.0 | 문서 동기화 및 최신 변경사항 반영 |
+| 2025-01-15 | v2.0.0 | 완전히 새로운 배포 가이드 작성 |
+| 2025-01-15 | v2.1.0 | 단계별 상세 가이드 추가 |
+| 2025-01-15 | v2.2.0 | 문제 해결 섹션 및 체크리스트 추가 |
+| 2025-01-15 | v2.3.0 | 문서 동기화 및 최신 변경사항 반영 |

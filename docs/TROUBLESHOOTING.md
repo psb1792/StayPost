@@ -1,7 +1,7 @@
 {
   "doc_meta": {
     "id": "TROUBLE-001",
-    "version": "2025-01-14",
+    "version": "2025-01-15",
     "owners": ["pablo"],
     "scope": ["troubleshooting", "debugging", "support"],
     "status": "active",
@@ -172,16 +172,16 @@ ALTER TABLE emotion_cards DISABLE ROW LEVEL SECURITY;
 **빠른 해결**:
 ```bash
 # 1. 함수 문법 검사
-supabase functions serve analyze-and-suggest-style
+supabase functions serve generate-final-caption
 
 # 2. 로그 확인
-supabase functions logs analyze-and-suggest-style
+supabase functions logs generate-final-caption
 
 # 3. 환경 변수 확인
 supabase secrets list
 
 # 4. 개별 함수 배포
-supabase functions deploy analyze-and-suggest-style --no-verify-jwt
+supabase functions deploy generate-final-caption --no-verify-jwt
 ```
 
 **근본 원인**:
@@ -201,7 +201,7 @@ const controller = new AbortController();
 const timeoutId = setTimeout(() => controller.abort(), 60000);
 
 try {
-  const response = await fetch('/functions/v1/analyze-and-suggest-style', {
+  const response = await fetch('/functions/v1/generate-final-caption', {
     method: 'POST',
     body: JSON.stringify(data),
     signal: controller.signal
@@ -390,7 +390,7 @@ const testOpenAI = async () => {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model: 'gpt-4',
+        model: 'gpt-4o',
         messages: [{ role: 'user', content: 'Hello' }],
         max_tokens: 10
       })
@@ -467,7 +467,7 @@ supabase secrets list
 supabase functions logs
 
 # 4. 개별 함수 배포
-supabase functions deploy analyze-and-suggest-style
+supabase functions deploy generate-final-caption
 ```
 
 ---
@@ -715,7 +715,7 @@ cat supabase/config.toml
 
 | 날짜 | 버전 | 변경사항 |
 |------|------|----------|
-| 2025-01-14 | v2.0.0 | AI 최적화된 문제 해결 가이드로 완전 재작성 |
-| 2025-01-14 | v2.1.0 | 긴급 상황 대응 섹션 추가 |
-| 2025-01-14 | v2.2.0 | 성능 최적화 문제 해결 방법 추가 |
-| 2025-01-14 | v2.3.0 | 문서 동기화 및 최신 변경사항 반영 |
+| 2025-01-15 | v2.0.0 | AI 최적화된 문제 해결 가이드로 완전 재작성 |
+| 2025-01-15 | v2.1.0 | 긴급 상황 대응 섹션 추가 |
+| 2025-01-15 | v2.2.0 | 성능 최적화 문제 해결 방법 추가 |
+| 2025-01-15 | v2.3.0 | 문서 동기화 및 최신 변경사항 반영 |
