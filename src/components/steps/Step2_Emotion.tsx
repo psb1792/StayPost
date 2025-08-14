@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Heart, Sparkles, Coffee, Camera, Palette } from 'lucide-react';
-import { generateCaption, getCachedCaption, getDefaultPreset } from '../../utils/generateCaption';
+import { CheckCircle, RefreshCw } from 'lucide-react';
 import { StylePreset } from '../../types/StylePreset';
-import useGenerateCaptions from '../../hooks/useGenerateCaptions';
+import { FinalCaptionResult } from '../../types/CanvasText';
+
+import useGenerateFinalCaption from '../../hooks/useGenerateFinalCaption';
+import { StyleProfile } from '../../hooks/useAnalyzeStyle';
 
 interface Step2EmotionProps {
   selectedEmotion: string;
@@ -11,98 +13,54 @@ interface Step2EmotionProps {
   setTemplateId: (templateId: string) => void;
   generatedCaption: string;
   setGeneratedCaption: (caption: string) => void;
+  finalCaption: FinalCaptionResult | null;
+  setFinalCaption: (finalCaption: FinalCaptionResult | null) => void;
   previewUrl: string | null;
-  imageDescription?: string; // 이미지 설명 추가
+  imageDescription?: string;
   selectedPreset: StylePreset;
   storeSlug: string;
   next: () => void;
   back: () => void;
+  analyzedStyleProfile: StyleProfile | null;
 }
 
-interface EmotionOption {
-  id: string;
-  name: string;
-  icon: React.ReactNode;
-  description: string;
-  color: string;
-}
-
-interface TemplateOption {
-  id: string;
-  name: string;
-  icon: React.ReactNode;
-  description: string;
-  preview: string;
-}
-
-const emotionOptions: EmotionOption[] = [
-  {
-    id: '설렘',
-    name: '설렘',
-    icon: <Heart className="w-6 h-6" />,
-    description: '기대감과 설렘을 담은 따뜻한 메시지',
-    color: 'bg-red-100 border-red-300 text-red-700'
-  },
-  {
-    id: '평온',
-    name: '평온',
-    icon: <Coffee className="w-6 h-6" />,
-    description: '차분하고 편안한 분위기의 메시지',
-    color: 'bg-blue-100 border-blue-300 text-blue-700'
-  },
-  {
-    id: '즐거움',
-    name: '즐거움',
-    icon: <Sparkles className="w-6 h-6" />,
-    description: '활기차고 즐거운 에너지의 메시지',
-    color: 'bg-yellow-100 border-yellow-300 text-yellow-700'
-  },
-  {
-    id: '로맨틱',
-    name: '로맨틱',
-    icon: <Heart className="w-6 h-6" />,
-    description: '사랑과 로맨스를 담은 감성적인 메시지',
-    color: 'bg-pink-100 border-pink-300 text-pink-700'
-  },
-  {
-    id: '힐링',
-    name: '힐링',
-    icon: <Palette className="w-6 h-6" />,
-    description: '마음을 치유하는 따뜻한 메시지',
-    color: 'bg-green-100 border-green-300 text-green-700'
+// AI 분석 결과를 감정/템플릿으로 매핑하는 함수
+const mapStyleProfileToSelections = (profile: StyleProfile) => {
+  // 감정 매핑
+  let emotion = '설렘'; // 기본값
+  if (profile.emotion) {
+    const emotionMap: { [key: string]: string } = {
+      'excitement': '설렘',
+      'serenity': '평온',
+      'joy': '즐거움',
+      'romantic': '로맨틱',
+      'healing': '힐링'
+    };
+    emotion = emotionMap[profile.emotion.toLowerCase()] || '설렘';
   }
-];
 
-const templateOptions: TemplateOption[] = [
-  {
-    id: 'default_universal',
-    name: '기본 템플릿',
-    icon: <Camera className="w-6 h-6" />,
-    description: '모든 분위기에 어울리는 기본 스타일',
-    preview: '깔끔하고 심플한 디자인'
-  },
-  {
-    id: 'ocean_sunset',
-    name: '오션 선셋',
-    icon: <Palette className="w-6 h-6" />,
-    description: '바다와 노을을 연상시키는 따뜻한 톤',
-    preview: '따뜻한 오렌지와 블루 그라데이션'
-  },
-  {
-    id: 'pool_luxury',
-    name: '럭셔리 풀',
-    icon: <Sparkles className="w-6 h-6" />,
-    description: '고급스러운 풀사이드 분위기',
-    preview: '엘레간트한 골드와 화이트 조합'
-  },
-  {
-    id: 'cafe_cozy',
-    name: '카페 코지',
-    icon: <Coffee className="w-6 h-6" />,
-    description: '아늑한 카페 분위기의 따뜻한 느낌',
-    preview: '따뜻한 브라운과 크림 톤'
+  // 템플릿 매핑 (context 기반)
+  let templateId = '기본 템플릿'; // 기본값
+  if (profile.context) {
+    const contextMap: { [key: string]: string } = {
+      'ocean': '오션 선셋',
+      'pool': '럭셔리 풀',
+      'cafe': '카페 코지',
+      'luxury': '럭셔리 풀',
+      'cozy': '카페 코지'
+    };
+    
+    const contextLower = profile.context.toLowerCase();
+    for (const [key, value] of Object.entries(contextMap)) {
+      if (contextLower.includes(key)) {
+        templateId = value;
+        break;
+      }
+    }
   }
-];
+
+  return { emotion, templateId };
+};
 
 export default function Step2Emotion({
   selectedEmotion,
@@ -111,59 +69,68 @@ export default function Step2Emotion({
   setTemplateId,
   generatedCaption,
   setGeneratedCaption,
+  finalCaption,
+  setFinalCaption,
   previewUrl,
   imageDescription,
   selectedPreset,
   storeSlug,
   next,
-  back
+  back,
+  analyzedStyleProfile
 }: Step2EmotionProps) {
   const [isGenerating, setIsGenerating] = useState(false);
-  const { captions, loading, error, generate } = useGenerateCaptions();
+  const [isInitialized, setIsInitialized] = useState(false);
+  
+  // 최종 캡션 생성 훅
+  const { finalCaption: finalCaptionFromHook, generate: generateFinal, loading: generatingFinal, error: finalError } = useGenerateFinalCaption();
 
-  // 감정과 템플릿이 선택되면 자동으로 캡션 생성
+  // AI 분석 결과로 초기값 설정
   useEffect(() => {
-    console.log('🔄 Step2 useEffect 트리거:', { 
-      selectedEmotion, 
-      templateId, 
-      previewUrl: !!previewUrl,
-      hasSelectedEmotion: !!selectedEmotion,
-      hasTemplateId: !!templateId
-    });
-    if (selectedEmotion && templateId && previewUrl) {
+    if (analyzedStyleProfile && !isInitialized) {
+      console.log('🎯 AI 분석 결과로 초기값 설정:', analyzedStyleProfile);
+      
+      const { emotion, templateId: suggestedTemplateId } = mapStyleProfileToSelections(analyzedStyleProfile);
+      
+      setSelectedEmotion(emotion);
+      setTemplateId(suggestedTemplateId);
+      setIsInitialized(true);
+      
+      console.log('✅ 초기값 설정 완료:', { emotion, templateId: suggestedTemplateId });
+    }
+  }, [analyzedStyleProfile, isInitialized, setSelectedEmotion, setTemplateId]);
+
+  // AI 분석 결과가 있으면 최종 캡션 자동 생성
+  useEffect(() => {
+    if (analyzedStyleProfile && previewUrl && isInitialized) {
+      console.log('🎯 AI 분석 결과로 최종 캡션 자동 생성 시작');
       generateCaptionHandler();
     }
-  }, [selectedEmotion, templateId]);
+  }, [analyzedStyleProfile, previewUrl, isInitialized]);
+
+  // finalCaption이 변경되면 generatedCaption 업데이트
+  useEffect(() => {
+    if (finalCaptionFromHook) {
+      console.log('✅ Step2: finalCaption 업데이트됨:', finalCaptionFromHook);
+      setFinalCaption(finalCaptionFromHook);
+      const combinedCaption = `${finalCaptionFromHook.hook}\n\n${finalCaptionFromHook.caption}`;
+      setGeneratedCaption(combinedCaption);
+    }
+  }, [finalCaptionFromHook, setFinalCaption, setGeneratedCaption]);
 
   const generateCaptionHandler = async () => {
-    if (!selectedEmotion || !templateId || !previewUrl) return;
+    if (!analyzedStyleProfile || !previewUrl) return;
 
-    console.log('🎯 Step2: 문구 생성 시작', { selectedEmotion, templateId });
+    console.log('🎯 Step2: AI 기반 문구 생성 시작', { analyzedStyleProfile });
     setIsGenerating(true);
     
     try {
-      // 새로운 훅을 사용하여 캡션 생성
-      await generate(selectedEmotion, templateId, undefined, imageDescription);
-      
-      // captions 배열에서 첫 번째 결과 사용
-      if (captions.length > 0) {
-        const result = captions[0];
-        console.log('✅ Step2: 훅 성공, 결과:', result);
-        // hook과 caption을 결합하여 하나의 문자열로 만듦
-        const combinedCaption = result.hook ? `${result.hook}\n\n${result.caption}` : result.caption;
-        setGeneratedCaption(combinedCaption);
-      } else {
-        // 캐시된 문구 사용
-        const cachedCaption = getCachedCaption(selectedEmotion, templateId);
-        console.log('🔄 Step2: 캐시된 문구 사용:', cachedCaption);
-        setGeneratedCaption(cachedCaption);
-      }
+      await generateFinal(previewUrl, analyzedStyleProfile);
     } catch (error) {
       console.error('❌ Step2: 문구 생성 에러:', error);
-      // 에러 발생 시에도 캐시된 문구 사용
-      const cachedCaption = getCachedCaption(selectedEmotion, templateId);
-      console.log('🔄 Step2: 에러로 인한 캐시된 문구 사용:', cachedCaption);
-      setGeneratedCaption(cachedCaption);
+      // 에러 시 기본 캡션 사용
+      const defaultCaption = "AI가 문구를 생성하는 중에 오류가 발생했습니다. 다른 옵션을 선택해보세요.";
+      setGeneratedCaption(defaultCaption);
     } finally {
       setIsGenerating(false);
     }
@@ -178,114 +145,126 @@ export default function Step2Emotion({
   return (
     <div className="max-w-4xl mx-auto">
       <div className="text-center mb-8">
-        <h2 className="text-3xl font-bold text-gray-900 mb-4">감정과 스타일 선택</h2>
+        <h2 className="text-3xl font-bold text-gray-900 mb-4">AI 스타일 분석 결과</h2>
         <p className="text-lg text-gray-600">
-          이미지에 어울리는 감정과 템플릿을 선택해주세요
+          AI가 분석한 이미지에 최적화된 감정과 스타일을 확인해보세요
         </p>
+        
+        {/* AI 분석 결과 표시 */}
+        {analyzedStyleProfile && (
+          <div className="mt-6 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg p-4 border border-blue-200">
+            <div className="flex items-center justify-center space-x-2 mb-3">
+              <CheckCircle className="w-5 h-5 text-green-600" />
+              <span className="font-medium text-green-800">AI 분석 완료</span>
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+              <div className="text-center">
+                <div className="font-medium text-gray-700">감정</div>
+                <div className="text-blue-600">{analyzedStyleProfile.emotion}</div>
+              </div>
+              <div className="text-center">
+                <div className="font-medium text-gray-700">톤</div>
+                <div className="text-blue-600">{analyzedStyleProfile.tone}</div>
+              </div>
+              <div className="text-center">
+                <div className="font-medium text-gray-700">컨텍스트</div>
+                <div className="text-blue-600">{analyzedStyleProfile.context}</div>
+              </div>
+              <div className="text-center">
+                <div className="font-medium text-gray-700">리듬</div>
+                <div className="text-blue-600">{analyzedStyleProfile.rhythm}</div>
+              </div>
+            </div>
+          </div>
+        )}
         
         {/* 현재 선택 상태 표시 */}
         <div className="mt-4 flex justify-center space-x-4 text-sm">
-          <div className={`px-3 py-1 rounded-full ${
-            selectedEmotion ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'
-          }`}>
-            감정: {selectedEmotion || '선택되지 않음'}
+          <div className="px-3 py-1 rounded-full bg-green-100 text-green-800">
+            감정: {selectedEmotion || 'AI 추천'}
           </div>
-          <div className={`px-3 py-1 rounded-full ${
-            templateId ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-600'
-          }`}>
-            템플릿: {templateOptions.find(t => t.id === templateId)?.name || '선택되지 않음'}
+          <div className="px-3 py-1 rounded-full bg-blue-100 text-blue-800">
+            템플릿: {templateId || 'AI 추천'}
           </div>
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* Left Column - Emotion Selection */}
+        {/* Left Column - AI Analysis Details */}
         <div className="space-y-6">
-          <div>
-            <h3 className="text-xl font-semibold text-gray-900 mb-4">감정 선택</h3>
-            <div className="grid grid-cols-1 gap-3">
-              {emotionOptions.map((emotion) => (
-                <button
-                  key={emotion.id}
-                  onClick={() => {
-                    console.log('🎯 감정 선택:', emotion.id);
-                    setSelectedEmotion(emotion.id);
-                  }}
-                  className={`p-4 rounded-lg border-2 text-left transition-all ${
-                    selectedEmotion === emotion.id
-                      ? `${emotion.color} border-current`
-                      : 'border-gray-200 hover:border-gray-300 bg-white'
-                  }`}
-                >
-                  <div className="flex items-center space-x-3">
-                    <div className={`p-2 rounded-lg ${
-                      selectedEmotion === emotion.id ? 'bg-white/20' : 'bg-gray-100'
-                    }`}>
-                      {emotion.icon}
-                    </div>
-                    <div className="flex-1">
-                      <div className="font-medium text-gray-900">{emotion.name}</div>
-                      <div className="text-sm text-gray-600">{emotion.description}</div>
-                    </div>
-                    {selectedEmotion === emotion.id && (
-                      <div className="text-green-600">
-                        <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                        </svg>
-                      </div>
-                    )}
-                  </div>
-                </button>
-              ))}
+          <div className="bg-white rounded-xl shadow-lg p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-xl font-semibold text-gray-900">AI 분석 상세</h3>
+              <button
+                onClick={generateCaptionHandler}
+                disabled={isGenerating || !analyzedStyleProfile}
+                className="flex items-center space-x-1 px-3 py-1 text-sm text-blue-600 hover:text-blue-800 disabled:text-gray-400"
+              >
+                <RefreshCw className={`w-4 h-4 ${isGenerating ? 'animate-spin' : ''}`} />
+                <span>재생성</span>
+              </button>
             </div>
-          </div>
+            
+            {analyzedStyleProfile && (
+              <div className="space-y-4">
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <h4 className="font-medium text-gray-900 mb-2">감정 분석</h4>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">주요 감정:</span>
+                      <span className="font-medium">{analyzedStyleProfile.emotion}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">감정 강도:</span>
+                      <span className="font-medium">{analyzedStyleProfile.emotion_level}</span>
+                    </div>
+                  </div>
+                </div>
 
-          {/* Template Selection */}
-          <div>
-            <h3 className="text-xl font-semibold text-gray-900 mb-4">템플릿 선택</h3>
-            <div className="grid grid-cols-1 gap-3">
-              {templateOptions.map((template) => (
-                <button
-                  key={template.id}
-                  onClick={() => {
-                    console.log('🎯 템플릿 선택:', template.id);
-                    setTemplateId(template.id);
-                  }}
-                  className={`p-4 rounded-lg border-2 text-left transition-all ${
-                    templateId === template.id
-                      ? 'border-blue-500 bg-blue-50'
-                      : 'border-gray-200 hover:border-gray-300 bg-white'
-                  }`}
-                >
-                  <div className="flex items-center space-x-3">
-                    <div className={`p-2 rounded-lg ${
-                      templateId === template.id ? 'bg-blue-100' : 'bg-gray-100'
-                    }`}>
-                      {template.icon}
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <h4 className="font-medium text-gray-900 mb-2">스타일 분석</h4>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">톤:</span>
+                      <span className="font-medium">{analyzedStyleProfile.tone}</span>
                     </div>
-                    <div className="flex-1">
-                      <div className="font-medium text-gray-900">{template.name}</div>
-                      <div className="text-sm text-gray-600">{template.description}</div>
-                      <div className="text-xs text-gray-500 mt-1">{template.preview}</div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">컨텍스트:</span>
+                      <span className="font-medium">{analyzedStyleProfile.context}</span>
                     </div>
-                    {templateId === template.id && (
-                      <div className="text-blue-600">
-                        <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                        </svg>
-                      </div>
-                    )}
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">리듬:</span>
+                      <span className="font-medium">{analyzedStyleProfile.rhythm}</span>
+                    </div>
                   </div>
-                </button>
-              ))}
-            </div>
+                </div>
+
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <h4 className="font-medium text-gray-900 mb-2">어휘 스타일</h4>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">세대:</span>
+                      <span className="font-medium">{analyzedStyleProfile.vocab_color.generation}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">성별 스타일:</span>
+                      <span className="font-medium">{analyzedStyleProfile.vocab_color.genderStyle}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">인터넷 수준:</span>
+                      <span className="font-medium">{analyzedStyleProfile.vocab_color.internetLevel}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
         {/* Right Column - Preview */}
         <div className="space-y-6">
-          <div>
-            <h3 className="text-xl font-semibold text-gray-900 mb-4">미리보기</h3>
+          <div className="bg-white rounded-xl shadow-lg p-6">
+            <h3 className="text-xl font-semibold text-gray-900 mb-4">AI 생성 결과</h3>
             
             {/* Image Preview */}
             {previewUrl && (
@@ -301,32 +280,53 @@ export default function Step2Emotion({
             {/* Generated Caption */}
             <div className="bg-gray-50 rounded-lg p-4">
               <h4 className="font-medium text-gray-900 mb-2">생성된 문구</h4>
-              {isGenerating ? (
+              {isGenerating || generatingFinal ? (
                 <div className="flex items-center space-x-2 text-gray-600">
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
-                  <span>문구를 생성하고 있습니다...</span>
+                  <span>AI가 문구를 생성하고 있습니다...</span>
                 </div>
               ) : generatedCaption ? (
-                <p className="text-gray-800 leading-relaxed">{generatedCaption}</p>
+                <div className="space-y-3">
+                  {finalCaption && (
+                    <div className="bg-blue-50 rounded p-3">
+                      <div className="text-sm font-medium text-blue-800 mb-1">훅 문구</div>
+                      <p className="text-blue-700 text-sm">{finalCaption.hook}</p>
+                    </div>
+                  )}
+                  <div>
+                    <div className="text-sm font-medium text-gray-700 mb-1">메인 문구</div>
+                    <p className="text-gray-800 leading-relaxed">{finalCaption?.caption || generatedCaption}</p>
+                  </div>
+                  {finalCaption?.hashtags && finalCaption.hashtags.length > 0 && (
+                    <div className="bg-green-50 rounded p-3">
+                      <div className="text-sm font-medium text-green-800 mb-1">해시태그</div>
+                      <div className="flex flex-wrap gap-1">
+                        {finalCaption.hashtags.map((tag, index) => (
+                          <span key={index} className="text-green-700 text-sm">#{tag}</span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
               ) : (
-                <p className="text-gray-500">감정과 템플릿을 선택하면 문구가 생성됩니다</p>
+                <p className="text-gray-500">AI가 문구를 생성 중입니다...</p>
               )}
             </div>
 
             {/* Selected Options Summary */}
             <div className="bg-blue-50 rounded-lg p-4">
-              <h4 className="font-medium text-blue-900 mb-2">선택된 옵션</h4>
+              <h4 className="font-medium text-blue-900 mb-2">AI 추천 옵션</h4>
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
                   <span className="text-blue-700">감정:</span>
                   <span className="font-medium text-blue-900">
-                    {selectedEmotion || '선택되지 않음'}
+                    {selectedEmotion || 'AI 추천'}
                   </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-blue-700">템플릿:</span>
                   <span className="font-medium text-blue-900">
-                    {templateOptions.find(t => t.id === templateId)?.name || '선택되지 않음'}
+                    {templateId || 'AI 추천'}
                   </span>
                 </div>
               </div>

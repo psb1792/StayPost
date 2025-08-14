@@ -27,6 +27,7 @@ function extractHookFromCaption(caption: string): string {
 interface Step3CanvasProps {
   previewUrl: string | null;
   generatedCaption: string;
+  finalCaption: {hook: string; caption: string; hashtags: string[]} | null;
   selectedEmotion: string;
   templateId: string;
   canvasUrl: string;
@@ -41,6 +42,7 @@ interface Step3CanvasProps {
 export default function Step3Canvas({
   previewUrl,
   generatedCaption,
+  finalCaption,
   selectedEmotion,
   templateId,
   canvasUrl,
@@ -56,6 +58,17 @@ export default function Step3Canvas({
   const [isSaving, setIsSaving] = useState(false);
   const [showPreview, setShowPreview] = useState(true);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'success' | 'error'>('idle');
+
+  // hook과 caption을 분리하는 함수 - finalCaption 우선 사용
+  function getHookFromCaption(caption: string): string {
+    // finalCaption이 있으면 hook 사용
+    if (finalCaption?.hook) {
+      return finalCaption.hook;
+    }
+    
+    // 기존 로직으로 fallback
+    return extractHookFromCaption(caption);
+  }
 
   const generateCanvas = async () => {
     if (!canvasRef.current || !previewUrl || !generatedCaption) return;
@@ -213,12 +226,12 @@ export default function Step3Canvas({
                   caption={generatedCaption}
                   filter={null}
                   topText={{
-                    text: extractHookFromCaption(generatedCaption ?? ''),
+                    text: getHookFromCaption(generatedCaption ?? ''),
                     fontSize: 38, fontWeight: 800, lineClamp: 1, withOutline: true
                   }}
                   bottomText={{
-                    // 해시태그·긴 문장 들어오지 않도록 CTA 고정
-                    text: '자세한 안내와 예약은 프로필 링크에서 확인하세요.',
+                    // finalCaption이 있으면 caption 사용, 없으면 기본 CTA
+                    text: finalCaption?.caption || '자세한 안내와 예약은 프로필 링크에서 확인하세요.',
                     fontSize: 26, lineClamp: 3, maxWidthPct: 0.9, withOutline: true
                   }}
                 />

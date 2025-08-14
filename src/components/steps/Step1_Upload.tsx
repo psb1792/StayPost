@@ -2,8 +2,9 @@ import React, { useCallback, useState, useEffect } from 'react';
 import { Upload, Image as ImageIcon, Store, Plus, CheckCircle, AlertCircle } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { StylePreset, StoreProfile } from '../../types/StylePreset';
-import { getDefaultPreset } from '../../utils/generateCaption';
+import { getDefaultPreset } from '../../utils/stylePreset';
 import { koreanToSlug } from '../../utils/slugify';
+import useAnalyzeStyle, { StyleProfile } from '../../hooks/useAnalyzeStyle';
 
 interface Step1UploadProps {
   uploadedImage: File | null;
@@ -18,6 +19,9 @@ interface Step1UploadProps {
   setSelectedPreset: (preset: StylePreset) => void;
   next: () => void;
   hasExistingStore: boolean;
+  // 새로운 스타일 분석 관련 props
+  analyzedStyleProfile: StyleProfile | null;
+  setAnalyzedStyleProfile: (profile: StyleProfile | null) => void;
 }
 
 export default function Step1Upload({
@@ -32,7 +36,9 @@ export default function Step1Upload({
   selectedPreset,
   setSelectedPreset,
   next,
-  hasExistingStore
+  hasExistingStore,
+  analyzedStyleProfile,
+  setAnalyzedStyleProfile
 }: Step1UploadProps) {
   // 기존 상태들
   const [existingStores, setExistingStores] = useState<StoreProfile[]>([]);
@@ -47,24 +53,58 @@ export default function Step1Upload({
   const [isCheckingSlug, setIsCheckingSlug] = useState(false);
   const [showPresetSelector, setShowPresetSelector] = useState(false);
 
-  const handleFileChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+  // 스타일 분석 훅
+  const { analyze, styleProfile, loading: analyzingStyle, error: styleAnalysisError } = useAnalyzeStyle();
+
+  // 이미지를 base64로 변환하는 함수
+  const fileToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => {
+        const result = reader.result as string;
+        // data:image/jpeg;base64, 부분 제거
+        const base64 = result.split(',')[1];
+        resolve(base64);
+      };
+      reader.onerror = error => reject(error);
+    });
+  };
+
+  const handleFileChange = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
       setUploadedImage(file);
       const url = URL.createObjectURL(file);
       setPreviewUrl(url);
+      
+      // 이미지 업로드 후 스타일 분석 호출
+      try {
+        const base64 = await fileToBase64(file);
+        await analyze(base64);
+      } catch (error) {
+        console.error('스타일 분석 실패:', error);
+      }
     }
-  }, [setUploadedImage, setPreviewUrl]);
+  }, [setUploadedImage, setPreviewUrl, analyze]);
 
-  const handleDrop = useCallback((event: React.DragEvent<HTMLDivElement>) => {
+  const handleDrop = useCallback(async (event: React.DragEvent<HTMLDivElement>) => {
     event.preventDefault();
     const file = event.dataTransfer.files?.[0];
     if (file && file.type.startsWith('image/')) {
       setUploadedImage(file);
       const url = URL.createObjectURL(file);
       setPreviewUrl(url);
+      
+      // 이미지 업로드 후 스타일 분석 호출
+      try {
+        const base64 = await fileToBase64(file);
+        await analyze(base64);
+      } catch (error) {
+        console.error('스타일 분석 실패:', error);
+      }
     }
-  }, [setUploadedImage, setPreviewUrl]);
+  }, [setUploadedImage, setPreviewUrl, analyze, fileToBase64]);
 
   const handleDragOver = useCallback((event: React.DragEvent<HTMLDivElement>) => {
     event.preventDefault();
@@ -74,6 +114,14 @@ export default function Step1Upload({
   useEffect(() => {
     loadExistingStores();
   }, []);
+
+  // 스타일 분석 결과를 부모 컴포넌트로 전달
+  useEffect(() => {
+    if (styleProfile) {
+      console.log('🎯 Step1: 스타일 분석 결과를 부모로 전달:', styleProfile);
+      setAnalyzedStyleProfile(styleProfile);
+    }
+  }, [styleProfile, setAnalyzedStyleProfile]);
 
   const loadExistingStores = async () => {
     setIsLoadingStores(true);
@@ -222,7 +270,7 @@ export default function Step1Upload({
     }
   };
 
-  const canContinue = uploadedImage && storeSlug;
+  const canContinue = uploadedImage && storeSlug && styleProfile;
 
   return (
     <div className="max-w-4xl mx-auto">
@@ -466,6 +514,44 @@ export default function Step1Upload({
               </div>
             )}
 
+            {/* Style Analysis Status */}
+            {uploadedImage && (
+              <div className="mt-4">
+                {analyzingStyle ? (
+                  <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                    <div className="flex items-center text-blue-700">
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-2"></div>
+                      <span className="text-sm font-medium">
+                        AI가 이미지 스타일을 분석하고 있습니다...
+                      </span>
+                    </div>
+                  </div>
+                ) : styleProfile ? (
+                  <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                    <div className="flex items-center text-green-700">
+                      <CheckCircle className="w-4 h-4 mr-2" />
+                      <span className="text-sm font-medium">
+                        AI 스타일 분석 완료
+                      </span>
+                    </div>
+                    <div className="mt-2 grid grid-cols-2 gap-2 text-xs">
+                      <div>감정: {styleProfile.emotion}</div>
+                      <div>톤: {styleProfile.tone}</div>
+                    </div>
+                  </div>
+                ) : styleAnalysisError ? (
+                  <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+                    <div className="flex items-center text-red-700">
+                      <AlertCircle className="w-4 h-4 mr-2" />
+                      <span className="text-sm font-medium">
+                        스타일 분석 실패: {styleAnalysisError}
+                      </span>
+                    </div>
+                  </div>
+                ) : null}
+              </div>
+            )}
+
             {/* Image Description Input */}
             {uploadedImage && (
               <div className="mt-4">
@@ -510,7 +596,7 @@ export default function Step1Upload({
               : 'text-gray-400 bg-gray-200 cursor-not-allowed'
           }`}
         >
-          {canContinue ? '다음 단계로 진행' : '가게 선택과 이미지 업로드를 완료해주세요'}
+          {canContinue ? '다음 단계로 진행' : '가게 선택, 이미지 업로드, AI 분석을 완료해주세요'}
         </button>
       </div>
     </div>
