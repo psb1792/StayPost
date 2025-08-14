@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Heart, Sparkles, Coffee, Camera, Palette } from 'lucide-react';
 import { generateCaption, getCachedCaption, getDefaultPreset } from '../../utils/generateCaption';
 import { StylePreset } from '../../types/StylePreset';
+import useGenerateCaptions from '../../hooks/useGenerateCaptions';
 
 interface Step2EmotionProps {
   selectedEmotion: string;
@@ -118,6 +119,7 @@ export default function Step2Emotion({
   back
 }: Step2EmotionProps) {
   const [isGenerating, setIsGenerating] = useState(false);
+  const { captions, loading, error, generate } = useGenerateCaptions();
 
   // 감정과 템플릿이 선택되면 자동으로 캡션 생성
   useEffect(() => {
@@ -140,27 +142,18 @@ export default function Step2Emotion({
     setIsGenerating(true);
     
     try {
-      // GPT API를 사용하여 문구 생성
-      console.log("📦 emotion", selectedEmotion);
-      console.log("📦 preset", selectedPreset);
-      console.log("📦 slug", storeSlug);
+      // 새로운 훅을 사용하여 캡션 생성
+      await generate(selectedEmotion, templateId, undefined, imageDescription);
       
-      const result = await generateCaption({
-        emotion: selectedEmotion,
-        templateId: templateId,
-        imageDescription, // 이미지 설명이 있으면 포함
-        selectedPreset: selectedPreset || getDefaultPreset(), // 스타일 preset 정보 포함 (fallback 적용)
-        slug: storeSlug // 가게 슬러그 포함
-      });
-
-      console.log('📝 Step2: 문구 생성 결과', result);
-
-      if (result.success) {
-        console.log('✅ Step2: GPT API 성공, 문구 설정:', result.caption);
-        setGeneratedCaption(result.caption);
+      // captions 배열에서 첫 번째 결과 사용
+      if (captions.length > 0) {
+        const result = captions[0];
+        console.log('✅ Step2: 훅 성공, 결과:', result);
+        // hook과 caption을 결합하여 하나의 문자열로 만듦
+        const combinedCaption = result.hook ? `${result.hook}\n\n${result.caption}` : result.caption;
+        setGeneratedCaption(combinedCaption);
       } else {
-        // API 호출 실패 시 캐시된 문구 사용
-        console.warn('⚠️ Step2: GPT API 호출 실패, 캐시된 문구 사용:', result.error);
+        // 캐시된 문구 사용
         const cachedCaption = getCachedCaption(selectedEmotion, templateId);
         console.log('🔄 Step2: 캐시된 문구 사용:', cachedCaption);
         setGeneratedCaption(cachedCaption);

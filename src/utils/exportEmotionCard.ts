@@ -1,6 +1,7 @@
-import { supabase } from '../lib/supabase';
-import { buildEmotionCardKey } from './storageKey';
-import { koreanToSlug } from './slugify';
+import { supabase } from '@/lib/supabase';
+import { buildEmotionCardKey } from '@/utils/storageKey';
+import { koreanToSlug } from '@/utils/slugify';
+import { retry } from '@/utils/retry';
 
 type SeoMeta = {
   title: string;
@@ -45,10 +46,11 @@ export async function exportEmotionCard(args: ExportArgs): Promise<ExportEmotion
     const asciiSlug = koreanToSlug(args.storeSlug);
     const key = buildEmotionCardKey(asciiSlug); // e.g. emotion-cards/{slug}/{epoch}_{rand6}.png
 
-    // 3) 업로드
-    const upload = await supabase.storage
-      .from('emotion-cards')
-      .upload(key, blob, { contentType: 'image/png', upsert: false });
+    // 3) 업로드 (재시도 적용)
+    const upload = await retry(
+      () => supabase.storage.from('emotion-cards').upload(key, blob, { contentType: 'image/png', upsert: false }),
+      2, 400
+    );
     if (upload.error) return { ok: false, error: 'STORAGE_UPLOAD_FAILED', cause: upload.error };
 
     // 4) 공개 URL (버킷 public 가정; private이면 createSignedUrl 사용)

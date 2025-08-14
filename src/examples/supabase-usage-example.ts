@@ -4,7 +4,7 @@ import { supabase, invokeSupabaseFunction } from '../lib/supabase'
 export async function exampleDirectUsage() {
   try {
     // The Supabase client automatically handles authentication tokens
-    const { data, error } = await supabase.functions.invoke('generateCaption', {
+    const { data, error } = await supabase.functions.invoke('generate-caption', {
       body: { 
         emotion: 'cozy',
         templateId: 'template-1'
@@ -26,7 +26,7 @@ export async function exampleDirectUsage() {
 // Example 2: Using the helper function for cleaner code
 export async function exampleWithHelper(imageUrl: string) {
   try {
-    const { data, error } = await invokeSupabaseFunction('generateCaption', {
+    const { data, error } = await invokeSupabaseFunction('generate-caption', {
       imageUrl,
       emotion: 'romantic',
       templateId: 'template-2'

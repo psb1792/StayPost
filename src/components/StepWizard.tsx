@@ -29,6 +29,7 @@ export default function StepWizard({ className = '' }: StepWizardProps) {
   const [templateId, setTemplateId] = useState<string>('');
   const [generatedCaption, setGeneratedCaption] = useState<string>('');
   const [canvasUrl, setCanvasUrl] = useState<string>('');
+  const [cardId, setCardId] = useState<string | null>(null);
   const [seoMeta, setSeoMeta] = useState<{
     title: string;
     keywords: string[];
@@ -127,6 +128,7 @@ export default function StepWizard({ className = '' }: StepWizardProps) {
       setCanvasUrl={setCanvasUrl}
       selectedPreset={selectedPreset}
       storeSlug={storeSlug}  // storeSlug 추가
+      setCardId={setCardId}  // cardId 설정 함수 추가
       next={next}
       back={back}
       key={2}
@@ -147,6 +149,7 @@ export default function StepWizard({ className = '' }: StepWizardProps) {
     />,
     <Step5Export
       canvasUrl={canvasUrl}
+      cardId={cardId!}
       generatedCaption={generatedCaption}
       selectedEmotion={selectedEmotion}
       templateId={templateId}
@@ -168,11 +171,12 @@ export default function StepWizard({ className = '' }: StepWizardProps) {
     console.log('🪄 templateId:', templateId);
     console.log('🪄 generatedCaption:', generatedCaption ? `${generatedCaption.substring(0, 30)}...` : 'null');
     console.log('🪄 canvasUrl:', canvasUrl ? `${canvasUrl.substring(0, 50)}...` : 'null');
+    console.log('🪄 cardId:', cardId);
     console.log('🪄 seoMeta:', seoMeta);
     console.log('🪄 storeSlug:', storeSlug);
     console.log('🪄 hasExistingStore:', hasExistingStore);
     console.log('🪄 selectedPreset:', selectedPreset);
-  }, [step, uploadedImage, previewUrl, imageDescription, selectedEmotion, templateId, generatedCaption, canvasUrl, seoMeta, storeSlug, hasExistingStore, selectedPreset]);
+  }, [step, uploadedImage, previewUrl, imageDescription, selectedEmotion, templateId, generatedCaption, canvasUrl, cardId, seoMeta, storeSlug, hasExistingStore, selectedPreset]);
   
   return (
     <div className={`min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 ${className}`}>

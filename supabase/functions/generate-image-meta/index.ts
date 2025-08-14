@@ -1,6 +1,5 @@
 import { corsHeaders } from '../_shared/cors.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { supabase } from '../lib/supabase';
 
 interface ImageMetaResponse {
   main_features: string[];

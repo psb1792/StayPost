@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Download, Share2, Copy, Check, ExternalLink, Heart } from 'lucide-react';
+import { downloadImage, copyCaption, shareNativeOrFallback } from '@/utils/export';
 
 interface Step5ExportProps {
   canvasUrl: string;
@@ -37,7 +38,7 @@ export default function Step5Export({
     setShareUrl(url);
   }, [storeSlug, seoMeta.slug]);
 
-  const downloadImage = async () => {
+  const handleDownloadImage = async () => {
     if (!canvasUrl) {
       console.error('❌ No canvas URL available for download');
       alert('다운로드할 이미지가 없습니다.');
@@ -47,14 +48,7 @@ export default function Step5Export({
     console.log('📥 Starting image download...');
     
     try {
-      // Storage 이미지 직접 다운로드 (fetch → blob → a.href=objectURL)
-      const res = await fetch(canvasUrl);
-      const blob = await res.blob();
-      const a = document.createElement('a');
-      a.href = URL.createObjectURL(blob);
-      a.download = `emotion_card_${storeSlug}_${cardId}.png`;
-      a.click();
-      URL.revokeObjectURL(a.href);
+      await downloadImage(canvasUrl, `emotion_card_${storeSlug}_${cardId}.png`);
       console.log('✅ Image download completed');
     } catch (error) {
       console.error('❌ Download failed:', error);
@@ -87,9 +81,26 @@ export default function Step5Export({
     }
   };
 
-  const copyCaption = async () => {
-    const text = `${generatedCaption}\n\n${seoMeta.hashtags.map(h => `#${h}`).join(' ')}`;
-    await copyToClipboard(text);
+  const handleCopyCaption = async () => {
+    try {
+      await copyCaption(generatedCaption, seoMeta.hashtags);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (error) {
+      console.error('Failed to copy caption:', error);
+    }
+  };
+
+  const handleNativeShare = async () => {
+    try {
+      await shareNativeOrFallback({ 
+        url: shareUrl, 
+        text: generatedCaption, 
+        title: '감성 카드' 
+      });
+    } catch (error) {
+      console.error('Failed to share:', error);
+    }
   };
 
   return (
@@ -152,7 +163,7 @@ export default function Step5Export({
               생성된 이미지를 고화질로 다운로드할 수 있습니다.
             </p>
             <button
-              onClick={downloadImage}
+              onClick={handleDownloadImage}
               className="w-full px-6 py-3 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 flex items-center justify-center"
             >
               <Download className="w-5 h-5 mr-2" />
@@ -168,7 +179,7 @@ export default function Step5Export({
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-xl font-semibold text-gray-900">생성된 문구</h3>
               <button
-                onClick={copyCaption}
+                onClick={handleCopyCaption}
                 className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg"
                 title="문구 복사"
               >
@@ -241,6 +252,13 @@ export default function Step5Export({
                   >
                     <Share2 className="w-4 h-4 mr-2" />
                     KakaoStory
+                  </button>
+                  <button
+                    onClick={handleNativeShare}
+                    className="px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 flex items-center justify-center"
+                  >
+                    <Share2 className="w-4 h-4 mr-2" />
+                    공유하기
                   </button>
                   <button
                     onClick={() => window.open(shareUrl, '_blank')}
