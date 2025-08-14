@@ -11,9 +11,11 @@ const koreanToRoman: { [key: string]: string } = {
   'ㅔ': 'e', 'ㅕ': 'yeo', 'ㅖ': 'ye', 'ㅗ': 'o', 'ㅘ': 'wa',
   'ㅙ': 'wae', 'ㅚ': 'oe', 'ㅛ': 'yo', 'ㅜ': 'u', 'ㅝ': 'wo',
   'ㅞ': 'we', 'ㅟ': 'wi', 'ㅠ': 'yu', 'ㅡ': 'eu', 'ㅢ': 'ui',
-  'ㅣ': 'i',
-  
-  // Final consonants (종성)
+  'ㅣ': 'i'
+};
+
+// Final consonants (종성) - separate mapping to avoid duplicates
+const finalConsonantMap: { [key: string]: string } = {
   'ㄱ': 'k', 'ㄲ': 'k', 'ㄳ': 'ks', 'ㄴ': 'n', 'ㄵ': 'nj',
   'ㄶ': 'nh', 'ㄷ': 't', 'ㄹ': 'l', 'ㄺ': 'lk', 'ㄻ': 'lm',
   'ㄼ': 'lb', 'ㄽ': 'ls', 'ㄾ': 'lt', 'ㄿ': 'lp', 'ㅀ': 'lh',
@@ -72,6 +74,8 @@ export function koreanToSlug(text: string): string {
     for (const part of decomposed) {
       if (koreanToRoman[part]) {
         result += koreanToRoman[part];
+      } else if (finalConsonantMap[part]) {
+        result += finalConsonantMap[part];
       }
     }
   }

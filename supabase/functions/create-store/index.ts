@@ -46,6 +46,24 @@ Deno.serve(async (req: Request) => {
       )
     }
 
+    // Validate that slug is ASCII-only and follows proper format
+    const asciiSlug = slug.toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '') // Remove diacritics
+      .replace(/[^a-z0-9-]/g, '') // Only allow lowercase letters, numbers, and hyphens
+      .replace(/^-+|-+$/g, '') // Remove leading/trailing hyphens
+      .replace(/-+/g, '-'); // Replace multiple hyphens with single hyphen
+
+    if (asciiSlug !== slug) {
+      return new Response(
+        JSON.stringify({ error: 'Slug must be ASCII-only and follow proper format' }),
+        { 
+          status: 400, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      )
+    }
+
     // Initialize Supabase client
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
@@ -56,7 +74,7 @@ Deno.serve(async (req: Request) => {
       .from('store_profiles')
       .insert({
         store_name: storeName,
-        slug: slug
+        slug: asciiSlug
       })
       .select()
       .single()

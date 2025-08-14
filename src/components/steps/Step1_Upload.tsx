@@ -1,6 +1,9 @@
 import React, { useCallback, useState, useEffect } from 'react';
-import { Upload, Image as ImageIcon, Store, Plus } from 'lucide-react';
+import { Upload, Image as ImageIcon, Store, Plus, CheckCircle, AlertCircle } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
+import { StylePreset, StoreProfile } from '../../types/StylePreset';
+import { getDefaultPreset } from '../../utils/generateCaption';
+import { koreanToSlug } from '../../utils/slugify';
 
 interface Step1UploadProps {
   uploadedImage: File | null;
@@ -11,6 +14,8 @@ interface Step1UploadProps {
   setImageDescription: (description: string) => void;
   storeSlug: string;
   setStoreSlug: (slug: string) => void;
+  selectedPreset: StylePreset;
+  setSelectedPreset: (preset: StylePreset) => void;
   next: () => void;
   hasExistingStore: boolean;
 }
@@ -24,15 +29,24 @@ export default function Step1Upload({
   setImageDescription,
   storeSlug,
   setStoreSlug,
+  selectedPreset,
+  setSelectedPreset,
   next,
   hasExistingStore
 }: Step1UploadProps) {
-  const [existingStores, setExistingStores] = useState<Array<{ slug: string; store_name: string }>>([]);
+  // 기존 상태들
+  const [existingStores, setExistingStores] = useState<StoreProfile[]>([]);
   const [showStoreForm, setShowStoreForm] = useState(false);
   const [storeName, setStoreName] = useState('');
+  const [storeIntro, setStoreIntro] = useState('');
   const [isCreatingStore, setIsCreatingStore] = useState(false);
   const [isLoadingStores, setIsLoadingStores] = useState(true);
   
+  // 새로운 상태들 (슬러그 중복 체크 및 preset 관련)
+  const [slugExists, setSlugExists] = useState<boolean | null>(null);
+  const [isCheckingSlug, setIsCheckingSlug] = useState(false);
+  const [showPresetSelector, setShowPresetSelector] = useState(false);
+
   const handleFileChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
@@ -66,14 +80,11 @@ export default function Step1Upload({
     try {
       const { data, error } = await supabase
         .from('store_profiles')
-        .select('slug, store_name')
+        .select('slug, store_name, tone, context, rhythm, self_projection, vocab_color')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
       setExistingStores(data || []);
-      
-      // 기존 가게가 있어도 자동 선택하지 않음
-      // 사용자가 직접 선택하도록 함
     } catch (error) {
       console.error('Failed to load stores:', error);
     } finally {
@@ -81,19 +92,85 @@ export default function Step1Upload({
     }
   };
 
+  // 슬러그 중복 체크 함수
+  const checkSlugExists = async (slug: string): Promise<boolean> => {
+    if (!slug.trim()) return false;
+    
+    setIsCheckingSlug(true);
+    try {
+      const { data, error } = await supabase
+        .from('store_profiles')
+        .select('slug')
+        .eq('slug', slug)
+        .single();
+
+      if (error && error.code !== 'PGRST116') { // PGRST116는 결과가 없을 때
+        throw error;
+      }
+
+      const exists = !!data;
+      setSlugExists(exists);
+      return exists;
+    } catch (error) {
+      console.error('Failed to check slug:', error);
+      setSlugExists(false);
+      return false;
+    } finally {
+      setIsCheckingSlug(false);
+    }
+  };
+
+  // 슬러그 생성 시 중복 체크 및 preset 선택 처리
+  const handleSlugGeneration = async (newSlug: string) => {
+    const exists = await checkSlugExists(newSlug);
+    
+    if (exists) {
+      // 기존 슬러그인 경우 - preset 선택 UI 숨김, 기존 preset 로드
+      setShowPresetSelector(false);
+      setSelectedPreset(getDefaultPreset());
+      
+      // 기존 store 정보 로드
+      const existingStore = existingStores.find(s => s.slug === newSlug);
+      if (existingStore) {
+        setSelectedPreset({
+          tone: existingStore.tone || 'friendly',
+          context: existingStore.context || 'marketing',
+          rhythm: existingStore.rhythm || 'medium',
+          self_projection: existingStore.self_projection || 'confident',
+          vocab_color: existingStore.vocab_color || {
+            generation: 'millennial',
+            genderStyle: 'neutral',
+            internetLevel: 'moderate'
+          }
+        });
+      }
+    } else {
+      // 신규 슬러그인 경우 - preset 선택 UI 표시
+      setShowPresetSelector(true);
+      setSelectedPreset(getDefaultPreset());
+    }
+  };
+
+  // 가게 생성 함수 수정 (preset 포함)
   const createStore = async () => {
     if (!storeName.trim()) return;
+    if (!selectedPreset) {
+      alert('스타일 preset을 선택해주세요.');
+      return;
+    }
 
     setIsCreatingStore(true);
     try {
-      const newSlug = storeName.toLowerCase().replace(/[^a-z0-9가-힣]/g, '-');
+      const newSlug = koreanToSlug(storeName);
       
       const { data, error } = await supabase
         .from('store_profiles')
         .insert([
           {
             slug: newSlug,
-            store_name: storeName
+            store_name: storeName,
+            intro: storeIntro,
+            ...selectedPreset // tone, context, rhythm, self_projection, vocab_color 포함
           }
         ])
         .select()
@@ -103,13 +180,39 @@ export default function Step1Upload({
       
       setStoreSlug(newSlug);
       setShowStoreForm(false);
+      setShowPresetSelector(false);
       setStoreName('');
+      setStoreIntro('');
+      setSelectedPreset(getDefaultPreset());
       await loadExistingStores();
     } catch (error) {
       console.error('Failed to create store:', error);
       alert('가게 생성 중 오류가 발생했습니다. 다시 시도해주세요.');
     } finally {
       setIsCreatingStore(false);
+    }
+  };
+
+  // 기존 가게 선택 시 preset 로드
+  const handleStoreSelect = (selectedSlug: string) => {
+    setStoreSlug(selectedSlug);
+    setShowPresetSelector(false);
+    setSelectedPreset(getDefaultPreset());
+    
+    // 기존 store의 preset 정보 로드
+    const selectedStore = existingStores.find(s => s.slug === selectedSlug);
+    if (selectedStore) {
+      setSelectedPreset({
+        tone: selectedStore.tone || 'friendly',
+        context: selectedStore.context || 'marketing',
+        rhythm: selectedStore.rhythm || 'medium',
+        self_projection: selectedStore.self_projection || 'confident',
+        vocab_color: selectedStore.vocab_color || {
+          generation: 'millennial',
+          genderStyle: 'neutral',
+          internetLevel: 'moderate'
+        }
+      });
     }
   };
 
@@ -150,7 +253,7 @@ export default function Step1Upload({
                 {existingStores.map((store) => (
                   <button
                     key={store.slug}
-                    onClick={() => setStoreSlug(store.slug)}
+                    onClick={() => handleStoreSelect(store.slug)}
                     className={`w-full p-3 rounded-lg border-2 text-left transition-all ${
                       storeSlug === store.slug
                         ? 'border-blue-500 bg-blue-50'
@@ -181,14 +284,40 @@ export default function Step1Upload({
                 <input
                   type="text"
                   value={storeName}
-                  onChange={(e) => setStoreName(e.target.value)}
+                  onChange={(e) => {
+                    setStoreName(e.target.value);
+                    // 가게 이름 입력 시 슬러그 생성 및 중복 체크
+                    if (e.target.value.trim()) {
+                      const newSlug = koreanToSlug(e.target.value);
+                      handleSlugGeneration(newSlug);
+                    } else {
+                      setSlugExists(null);
+                      setShowPresetSelector(false);
+                    }
+                  }}
                   placeholder="가게 이름을 입력하세요"
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
+                
+                <textarea
+                  value={storeIntro}
+                  onChange={(e) => setStoreIntro(e.target.value)}
+                  placeholder="예: 숲속에 위치한 조용한 펜션, 바다 뷰가 있는 루프탑 등"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg resize-none mt-3"
+                  rows={3}
+                />
+                
+                {/* 슬러그 중복 체크 상태 표시 */}
+                {isCheckingSlug && (
+                  <div className="mt-2 text-sm text-gray-500">
+                    슬러그 중복 확인 중...
+                  </div>
+                )}
+                
                 <div className="flex space-x-2 mt-3">
                   <button
                     onClick={createStore}
-                    disabled={!storeName.trim() || isCreatingStore}
+                    disabled={!storeName.trim() || isCreatingStore || !selectedPreset}
                     className="flex-1 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:bg-gray-300"
                   >
                     {isCreatingStore ? '저장 중...' : '가게 생성'}
@@ -197,6 +326,10 @@ export default function Step1Upload({
                     onClick={() => {
                       setShowStoreForm(false);
                       setStoreName('');
+                      setStoreIntro('');
+                      setSlugExists(null);
+                      setShowPresetSelector(false);
+                      setSelectedPreset(getDefaultPreset());
                     }}
                     className="px-4 py-2 text-sm font-medium text-gray-600 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
                   >
@@ -218,6 +351,41 @@ export default function Step1Upload({
               </div>
             )}
           </div>
+
+          {/* Preset Selector Component */}
+          {showPresetSelector && (
+            <div className="bg-white rounded-xl shadow-lg p-6">
+              <h3 className="text-xl font-semibold text-gray-900 mb-4">
+                스타일 Preset 선택
+              </h3>
+              <StylePresetSelector 
+                onSelect={setSelectedPreset}
+                selectedPreset={selectedPreset}
+              />
+            </div>
+          )}
+
+          {/* Slug Status Display */}
+          {slugExists !== null && (
+            <div className={`p-3 rounded-lg border ${
+              slugExists 
+                ? 'bg-blue-50 border-blue-200' 
+                : 'bg-green-50 border-green-200'
+            }`}>
+              <div className="flex items-center">
+                {slugExists ? (
+                  <AlertCircle className="w-5 h-5 text-blue-600 mr-2" />
+                ) : (
+                  <CheckCircle className="w-5 h-5 text-green-600 mr-2" />
+                )}
+                <span className="text-sm font-medium">
+                  {slugExists 
+                    ? '기존 가게입니다. 저장된 스타일을 사용합니다.' 
+                    : '새로운 가게입니다. 스타일을 선택해주세요.'}
+                </span>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Right Column - Image Upload */}
@@ -344,6 +512,90 @@ export default function Step1Upload({
         >
           {canContinue ? '다음 단계로 진행' : '가게 선택과 이미지 업로드를 완료해주세요'}
         </button>
+      </div>
+    </div>
+  );
+}
+
+// StylePresetSelector 컴포넌트
+interface StylePresetSelectorProps {
+  onSelect: (preset: StylePreset) => void;
+  selectedPreset: StylePreset;
+}
+
+// Preset deep equality function
+const isEqualPreset = (a: StylePreset, b: StylePreset) => {
+  return JSON.stringify(a) === JSON.stringify(b);
+};
+
+function StylePresetSelector({ onSelect, selectedPreset }: StylePresetSelectorProps) {
+  const presets: StylePreset[] = [
+    {
+      tone: 'friendly',
+      context: 'marketing',
+      rhythm: 'medium',
+      self_projection: 'confident',
+      vocab_color: {
+        generation: 'millennial',
+        genderStyle: 'neutral',
+        internetLevel: 'moderate'
+      }
+    },
+    {
+      tone: 'professional',
+      context: 'business',
+      rhythm: 'short',
+      self_projection: 'humble',
+      vocab_color: {
+        generation: 'genz',
+        genderStyle: 'feminine',
+        internetLevel: 'high'
+      }
+    },
+    {
+      tone: 'casual',
+      context: 'personal',
+      rhythm: 'long',
+      self_projection: 'enthusiastic',
+      vocab_color: {
+        generation: 'boomer',
+        genderStyle: 'masculine',
+        internetLevel: 'low'
+      }
+    }
+  ];
+
+  return (
+    <div className="space-y-4">
+      <p className="text-sm text-gray-600 mb-4">
+        콘텐츠 생성에 사용할 스타일을 선택해주세요
+      </p>
+      
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {presets.map((preset, index) => (
+          <button
+            key={index}
+            onClick={() => onSelect(preset)}
+            className={`p-4 rounded-lg border-2 text-left transition-all ${
+              selectedPreset && isEqualPreset(selectedPreset, preset)
+                ? 'border-blue-500 bg-blue-50'
+                : 'border-gray-200 hover:border-gray-300'
+            }`}
+          >
+            <div className="font-medium text-gray-900">
+              {preset.tone === 'friendly' ? '친근한' : 
+               preset.tone === 'professional' ? '전문적인' : '캐주얼한'} 스타일
+            </div>
+            <div className="text-sm text-gray-500 mt-1">
+              {preset.context === 'marketing' ? '마케팅' : 
+               preset.context === 'business' ? '비즈니스' : '개인적'} 콘텍스트
+            </div>
+            <div className="text-xs text-gray-400 mt-1">
+              {preset.rhythm === 'short' ? '짧은' : 
+               preset.rhythm === 'medium' ? '중간' : '긴'} 문장 리듬
+            </div>
+          </button>
+        ))}
       </div>
     </div>
   );

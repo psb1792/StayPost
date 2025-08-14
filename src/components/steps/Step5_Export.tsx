@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Download, Share2, Copy, Check, ExternalLink, Heart } from 'lucide-react';
+import { downloadImage, copyCaption, shareNativeOrFallback } from '@/utils/export';
 
 interface Step5ExportProps {
   canvasUrl: string;
@@ -13,6 +14,7 @@ interface Step5ExportProps {
     slug: string;
   };
   storeSlug: string;
+  cardId: string; // cardId 추가
   back: () => void;
 }
 
@@ -23,6 +25,7 @@ export default function Step5Export({
   templateId,
   seoMeta,
   storeSlug,
+  cardId, // cardId 추가
   back
 }: Step5ExportProps) {
   const [copied, setCopied] = useState(false);
@@ -35,7 +38,7 @@ export default function Step5Export({
     setShareUrl(url);
   }, [storeSlug, seoMeta.slug]);
 
-  const downloadImage = () => {
+  const handleDownloadImage = async () => {
     if (!canvasUrl) {
       console.error('❌ No canvas URL available for download');
       alert('다운로드할 이미지가 없습니다.');
@@ -43,16 +46,10 @@ export default function Step5Export({
     }
     
     console.log('📥 Starting image download...');
-    console.log('📥 canvasUrl length:', canvasUrl.length);
     
     try {
-      const link = document.createElement('a');
-      link.download = `staypost-${selectedEmotion}-${Date.now()}.png`;
-      link.href = canvasUrl;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      console.log('✅ Image download initiated');
+      await downloadImage(canvasUrl, `emotion_card_${storeSlug}_${cardId}.png`);
+      console.log('✅ Image download completed');
     } catch (error) {
       console.error('❌ Download failed:', error);
       alert('다운로드 중 오류가 발생했습니다.');
@@ -84,9 +81,26 @@ export default function Step5Export({
     }
   };
 
-  const copyCaption = () => {
-    const fullCaption = `${generatedCaption}\n\n${seoMeta.hashtags.join(' ')}`;
-    copyToClipboard(fullCaption);
+  const handleCopyCaption = async () => {
+    try {
+      await copyCaption(generatedCaption, seoMeta.hashtags);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (error) {
+      console.error('Failed to copy caption:', error);
+    }
+  };
+
+  const handleNativeShare = async () => {
+    try {
+      await shareNativeOrFallback({ 
+        url: shareUrl, 
+        text: generatedCaption, 
+        title: '감성 카드' 
+      });
+    } catch (error) {
+      console.error('Failed to share:', error);
+    }
   };
 
   return (
@@ -117,7 +131,7 @@ export default function Step5Export({
                   className="w-full rounded-lg shadow-md"
                 />
                 <div className="mt-2 p-2 bg-green-50 rounded text-sm text-green-700">
-                  ✅ 이미지 준비됨 ({(canvasUrl.length / 1024).toFixed(1)} KB)
+                  ✅ Storage 이미지 준비됨
                 </div>
               </div>
             ) : (
@@ -149,7 +163,7 @@ export default function Step5Export({
               생성된 이미지를 고화질로 다운로드할 수 있습니다.
             </p>
             <button
-              onClick={downloadImage}
+              onClick={handleDownloadImage}
               className="w-full px-6 py-3 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 flex items-center justify-center"
             >
               <Download className="w-5 h-5 mr-2" />
@@ -165,7 +179,7 @@ export default function Step5Export({
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-xl font-semibold text-gray-900">생성된 문구</h3>
               <button
-                onClick={copyCaption}
+                onClick={handleCopyCaption}
                 className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg"
                 title="문구 복사"
               >
@@ -238,6 +252,13 @@ export default function Step5Export({
                   >
                     <Share2 className="w-4 h-4 mr-2" />
                     KakaoStory
+                  </button>
+                  <button
+                    onClick={handleNativeShare}
+                    className="px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 flex items-center justify-center"
+                  >
+                    <Share2 className="w-4 h-4 mr-2" />
+                    공유하기
                   </button>
                   <button
                     onClick={() => window.open(shareUrl, '_blank')}

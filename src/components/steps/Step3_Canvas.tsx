@@ -1,6 +1,28 @@
 import React, { useRef, useState } from 'react';
-import { Download, RefreshCw, Eye } from 'lucide-react';
-import EmotionCanvas from '../EmotionCanvas';
+import { Download, RefreshCw, Eye, Save } from 'lucide-react';
+import EmotionCanvas from '@/components/EmotionCanvas';
+import { StylePreset } from '@/types/StylePreset';
+import { exportEmotionCard } from '@/utils/exportEmotionCard';
+import { makeHookFromCaption } from '@/utils/makeHookFromCaption';
+
+// hook과 caption을 분리하는 함수
+function extractHookFromCaption(caption: string): string {
+  if (!caption) return '';
+  
+  // 줄바꿈으로 분리
+  const lines = caption.split('\n').filter(line => line.trim());
+  
+  // 첫 번째 줄이 hook (16자 이내)
+  if (lines.length > 0) {
+    const firstLine = lines[0].trim();
+    if (firstLine.length <= 16) {
+      return firstLine;
+    }
+  }
+  
+  // 기존 로직으로 fallback
+  return makeHookFromCaption(caption, 16);
+}
 
 interface Step3CanvasProps {
   previewUrl: string | null;
@@ -9,6 +31,9 @@ interface Step3CanvasProps {
   templateId: string;
   canvasUrl: string;
   setCanvasUrl: (url: string) => void;
+  selectedPreset: StylePreset;
+  storeSlug: string;  // storeSlug 추가
+  setCardId: (cardId: string) => void;  // cardId 설정 함수 추가
   next: () => void;
   back: () => void;
 }
@@ -20,12 +45,17 @@ export default function Step3Canvas({
   templateId,
   canvasUrl,
   setCanvasUrl,
+  selectedPreset,
+  storeSlug,  // storeSlug 추가
+  setCardId,  // cardId 설정 함수 추가
   next,
   back
 }: Step3CanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [showPreview, setShowPreview] = useState(true);
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'success' | 'error'>('idle');
 
   const generateCanvas = async () => {
     if (!canvasRef.current || !previewUrl || !generatedCaption) return;
@@ -35,8 +65,14 @@ export default function Step3Canvas({
       // Canvas에서 이미지 URL 생성
       const canvas = canvasRef.current;
       
-      // Canvas가 완전히 렌더링될 때까지 잠시 대기
-      await new Promise(resolve => setTimeout(resolve, 100));
+      // Canvas가 완전히 렌더링될 때까지 더 안전하게 대기
+      await new Promise(resolve => setTimeout(resolve, 200));
+      
+      // Canvas가 실제로 그려졌는지 확인
+      const ctx = canvas.getContext('2d');
+      if (!ctx) {
+        throw new Error('Canvas context not available');
+      }
       
       const dataUrl = canvas.toDataURL('image/png');
       console.log('🎨 Generated canvas URL:', dataUrl.substring(0, 50) + '...');
@@ -58,17 +94,73 @@ export default function Step3Canvas({
     link.click();
   };
 
+  // 저장 기능 추가
+  const handleSave = async () => {
+    if (!canvasRef.current || !storeSlug) {
+      console.error('❌ Missing required data for save');
+      setSaveStatus('error');
+      return;
+    }
+
+    setIsSaving(true);
+    setSaveStatus('idle');
+    
+    try {
+      console.log('💾 Starting emotion card export...');
+      
+      // 폰트 로딩 대기(웹폰트 사용 시)
+      if ('fonts' in document) { 
+        await (document as any).fonts.ready; 
+      }
+      
+      const result = await exportEmotionCard({
+        canvas: canvasRef.current,
+        storeSlug,
+        caption: generatedCaption,
+        emotion: selectedEmotion,
+        templateId,
+        seoMeta: {
+          title: generatedCaption,
+          keywords: [selectedEmotion, storeSlug],
+          hashtags: [`#${selectedEmotion}`, `#${storeSlug}`],
+          slug: storeSlug
+        }
+      });
+
+      if (!result.ok) {
+        console.error('❌ Export failed:', result.error);
+        setSaveStatus('error');
+        alert(result.error || '내보내기에 실패했습니다.');
+      } else {
+        console.log('✅ Export successful:', result);
+        setSaveStatus('success');
+        
+        // cardId 설정
+        setCardId(result.cardId);
+        
+        // 성공 후 잠시 대기 후 다음 단계로
+        setTimeout(() => {
+          next();
+        }, 1500);
+      }
+      
+    } catch (error: any) {
+      console.error('❌ Export failed:', error);
+      setSaveStatus('error');
+      // 에러 메시지 표시 (실제로는 toast 사용 권장)
+      alert(error.message || '내보내기에 실패했습니다.');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   const handleNext = async () => {
     if (canvasUrl) {
       next();
     } else {
       await generateCanvas();
-      // Canvas 생성 후 잠시 대기 후 다음 단계로
-      setTimeout(() => {
-        if (canvasUrl) {
-          next();
-        }
-      }, 200);
+      // Canvas 생성 직후 바로 다음 단계로
+      setTimeout(next, 0);
     }
   };
 
@@ -120,6 +212,15 @@ export default function Step3Canvas({
                   imageUrl={previewUrl}
                   caption={generatedCaption}
                   filter={null}
+                  topText={{
+                    text: extractHookFromCaption(generatedCaption ?? ''),
+                    fontSize: 38, fontWeight: 800, lineClamp: 1, withOutline: true
+                  }}
+                  bottomText={{
+                    // 해시태그·긴 문장 들어오지 않도록 CTA 고정
+                    text: '자세한 안내와 예약은 프로필 링크에서 확인하세요.',
+                    fontSize: 26, lineClamp: 3, maxWidthPct: 0.9, withOutline: true
+                  }}
                 />
                 {/* Canvas URL 상태 표시 */}
                 {canvasUrl && (
@@ -150,6 +251,10 @@ export default function Step3Canvas({
               <div className="flex justify-between">
                 <span className="text-gray-600">문구 길이:</span>
                 <span className="font-medium text-gray-900">{generatedCaption.length}자</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">스토어:</span>
+                <span className="font-medium text-gray-900">{storeSlug}</span>
               </div>
             </div>
           </div>
@@ -186,10 +291,24 @@ export default function Step3Canvas({
 
           {/* Action Buttons */}
           <div className="bg-blue-50 rounded-lg p-6">
-            <h3 className="text-lg font-semibold text-blue-900 mb-4">다음 단계</h3>
+            <h3 className="text-lg font-semibold text-blue-900 mb-4">내보내기 및 다음 단계</h3>
             <p className="text-blue-800 text-sm mb-4">
-              현재 미리보기를 확인하신 후, 다음 단계에서 SEO 메타데이터를 설정하고 최종 저장을 진행합니다.
+              현재 미리보기를 확인하신 후, 내보내기 버튼을 눌러 감성 카드를 내보내고 다음 단계로 진행합니다.
             </p>
+            
+            {/* 저장 상태 표시 */}
+            {saveStatus === 'success' && (
+              <div className="mb-4 p-3 bg-green-100 border border-green-400 text-green-700 rounded-lg">
+                ✅ 내보내기가 완료되었습니다! 다음 단계로 이동합니다...
+              </div>
+            )}
+            
+            {saveStatus === 'error' && (
+              <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded-lg">
+                ❌ 내보내기에 실패했습니다. 다시 시도해주세요.
+              </div>
+            )}
+            
             <div className="flex space-x-3">
               <button
                 onClick={back}
@@ -198,10 +317,21 @@ export default function Step3Canvas({
                 이전 단계
               </button>
               <button
-                onClick={handleNext}
-                className="flex-1 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700"
+                onClick={handleSave}
+                disabled={isSaving || !canvasRef.current || !storeSlug}
+                className="flex-1 px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
               >
-                SEO 설정으로
+                {isSaving ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                    내보내는 중...
+                  </>
+                ) : (
+                  <>
+                    <Save className="w-4 h-4 mr-2" />
+                    내보내기
+                  </>
+                )}
               </button>
             </div>
           </div>
@@ -212,7 +342,8 @@ export default function Step3Canvas({
             <ul className="text-sm text-yellow-800 space-y-1">
               <li>• Canvas 미리보기에서 결과를 확인해보세요</li>
               <li>• 만족스럽지 않다면 이전 단계로 돌아가서 수정할 수 있습니다</li>
-              <li>• 다운로드 버튼으로 현재 결과를 저장할 수 있습니다</li>
+              <li>• 내보내기 버튼을 누르면 감성 카드가 데이터베이스에 저장됩니다</li>
+              <li>• 다운로드 버튼으로 현재 결과를 로컬에 저장할 수 있습니다</li>
             </ul>
           </div>
         </div>

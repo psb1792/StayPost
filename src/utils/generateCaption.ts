@@ -1,3 +1,5 @@
+import { supabase } from '../lib/supabase';
+
 /**
  * GPT API를 사용하여 감정 기반 문구 생성
  * 입력: 감정(emotion), 템플릿(template_id)
@@ -8,12 +10,43 @@ export interface CaptionGenerationParams {
   emotion: string;
   templateId: string;
   imageDescription?: string; // 선택적 이미지 설명
+  selectedPreset?: {
+    tone: string;
+    context: string;
+    rhythm: string;
+    self_projection: string;
+    vocab_color: {
+      generation: string;
+      genderStyle: string;
+      internetLevel: string;
+    };
+  } | null;
+  slug?: string; // 가게 슬러그
 }
 
 export interface CaptionGenerationResult {
+  hook: string;
   caption: string;
+  hashtags: string[];
   success: boolean;
   error?: string;
+}
+
+/**
+ * 기본 스타일 preset을 반환하는 함수
+ */
+export function getDefaultPreset() {
+  return {
+    tone: "friendly",
+    context: "customer",
+    rhythm: "balanced",
+    self_projection: "medium",
+    vocab_color: {
+      generation: "genY",
+      genderStyle: "neutral",
+      internetLevel: "none"
+    }
+  };
 }
 
 // 감정별 프롬프트 템플릿
@@ -66,7 +99,9 @@ const templateContexts = {
 export async function generateCaption({
   emotion,
   templateId,
-  imageDescription
+  imageDescription,
+  selectedPreset,
+  slug
 }: CaptionGenerationParams): Promise<CaptionGenerationResult> {
   try {
     // 감정과 템플릿 정보 가져오기
@@ -81,49 +116,66 @@ export async function generateCaption({
       };
     }
 
-    console.log('🚀 GPT API 호출 시작:', { emotion, templateId, imageDescription });
+    console.log('🚀 GPT API 호출 시작:', { emotion, templateId, imageDescription, selectedPreset });
 
-    // Supabase Edge Function URL 설정 (dev/prod 분기)
-    const baseUrl = import.meta.env.DEV 
-      ? 'http://localhost:54321/functions/v1'
-      : `${import.meta.env.VITE_SUPABASE_URL}/functions/v1`;
-    
-    const functionUrl = `${baseUrl}/generate-caption`;
-    
-    console.log('🌐 API URL:', functionUrl);
-    
-    // GPT API 호출
-    const response = await fetch(functionUrl, {
-      method: 'POST',
-      mode: 'cors',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-      },
-      body: JSON.stringify({
-        emotion,
-        templateId,
-        emotionDescription: emotionInfo.description,
-        emotionKeywords: emotionInfo.keywords,
-        templateDescription: templateInfo.description,
-        templateContext: templateInfo.context,
-        imageDescription // 이미지 설명이 있으면 포함
-      }),
-    });
+    // 사용자 세션 확인
+    const { data: { session } } = await supabase.auth.getSession();
+    const accessToken = session?.access_token;
 
-    console.log('📡 API 응답 상태:', response.status, response.statusText);
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      console.error('❌ API 호출 실패:', errorData);
-      throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+    if (!accessToken) {
+      return {
+        caption: '',
+        success: false,
+        error: '로그인이 필요합니다.'
+      };
     }
 
-    const result = await response.json();
-    console.log('✅ GPT API 응답 성공:', result);
+    // store_name 조회 (slug가 있는 경우에만)
+    let storeName: string | undefined;
+    if (slug) {
+      const { data: store, error } = await supabase
+        .from('store_profiles')
+        .select('store_name')
+        .eq('slug', slug)
+        .single();
+
+      if (error && error.code !== 'PGRST116') {
+        console.error('Failed to fetch store name:', error);
+      }
+      storeName = store?.store_name;
+    }
+
+    // 새로운 페이로드 형태로 통일
+    const payload = {
+      emotion,            // string (예: "설렘")
+      templateId,         // string (예: "default_universal")
+      storeName,          // string | undefined
+      placeDesc: templateInfo.context  // string | undefined
+    };
+
+    const { data, error } = await supabase.functions.invoke('generate-caption', {
+      body: payload,
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+
+    if (error) {
+      console.error('❌ Edge Function 호출 실패:', error);
+      throw error;
+    }
+
+    console.log('✅ GPT API 응답 성공:', data);
+    
+    // 1) 한 줄 강제 & 길이 제한
+    const hook = (data.hook || '')
+      .replace(/[\n\r]+/g, ' ')        // 줄바꿈 제거
+      .replace(/[#!?.,…~]+/g, '')      // 문장부호 제거
+      .trim()
+      .slice(0, 16);                    // 16자 컷
     
     return {
-      caption: result.caption,
+      hook,
+      caption: data.caption || '',
+      hashtags: data.hashtags || [],
       success: true
     };
 
@@ -131,10 +183,13 @@ export async function generateCaption({
     console.error('❌ Failed to generate caption:', error);
     
     // Fallback: 감정에 맞는 기본 문구 반환
+    const fallbackHook = `${emotion}의 순간`;
     const fallbackCaption = `${emotion} 감정에 맞는 문구입니다. ✨`;
     
     return {
+      hook: fallbackHook,
       caption: fallbackCaption,
+      hashtags: [],
       success: false,
       error: error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.'
     };
