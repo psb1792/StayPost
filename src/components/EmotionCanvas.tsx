@@ -1,6 +1,25 @@
 import React, { useEffect, useRef, useImperativeHandle, forwardRef } from "react";
-import { supabase } from "../lib/supabase";
-import { generateSeoMeta } from "../utils/generateSeoMeta";
+import { supabase } from "@/lib/supabase";
+import { generateSeoMeta } from "@/utils/generateSeoMeta";
+import { CanvasTextBlock } from "@/types/CanvasText";
+import { wrapText, drawOutlinedText } from "@/utils/textLayout";
+
+function fitOneLine(ctx: CanvasRenderingContext2D, text: string, maxW: number, fontPx: number) {
+  let size = fontPx;
+  ctx.font = `800 ${size}px Pretendard, system-ui`;
+  if (ctx.measureText(text).width <= maxW) return { text, size };
+
+  // 폰트 축소
+  while (size > 26 && ctx.measureText(text).width > maxW) {
+    size -= 2;
+    ctx.font = `800 ${size}px Pretendard, system-ui`;
+  }
+  // 그래도 길면 말줄임
+  while (ctx.measureText(text + '…').width > maxW && text.length > 2) {
+    text = text.slice(0, -1);
+  }
+  return { text: text + '…', size };
+}
 
 function drawMultilineText(
   ctx: CanvasRenderingContext2D,
@@ -37,10 +56,12 @@ interface EmotionCanvasProps {
   imageUrl: string | null;
   caption: string | null;
   filter?: string | null;
+  topText?: CanvasTextBlock;
+  bottomText?: CanvasTextBlock;
 }
 
 const EmotionCanvas = forwardRef<HTMLCanvasElement, EmotionCanvasProps>(
-  ({ imageUrl, caption, filter }, ref) => {
+  ({ imageUrl, caption, filter, topText, bottomText }, ref) => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
 
     useImperativeHandle(ref, () => canvasRef.current as HTMLCanvasElement, []);
@@ -50,6 +71,8 @@ const EmotionCanvas = forwardRef<HTMLCanvasElement, EmotionCanvasProps>(
       console.log('🎨 imageUrl:', imageUrl);
       console.log('🎨 caption:', caption);
       console.log('🎨 filter:', filter);
+      console.log('🎨 topText:', topText);
+      console.log('🎨 bottomText:', bottomText);
       
       const canvas = canvasRef.current;
       const ctx = canvas?.getContext("2d");
@@ -100,13 +123,52 @@ const EmotionCanvas = forwardRef<HTMLCanvasElement, EmotionCanvasProps>(
         ctx.drawImage(image, 0, 0, width, height);
         ctx.restore();
 
-        // Draw overlay for text readability
-        ctx.fillStyle = "rgba(0,0,0,0.3)";
-        ctx.fillRect(0, height - 200, width, 200);
+        // Set up text rendering context
+        const dpr = window.devicePixelRatio || 1;
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        ctx.textBaseline = 'top';
 
-        // Draw caption
-        if (caption) {
-          console.log('📝 Drawing caption:', caption);
+        // Draw top text (hook)
+        if (topText?.text) {
+          const t = topText;
+          const maxW = (t.maxWidthPct ?? 0.9) * canvas.width / dpr;
+          const fitted = fitOneLine(ctx, t.text, maxW, t.fontSize ?? 38);
+          ctx.font = `800 ${fitted.size}px Pretendard, system-ui`;
+          const x = (t.align === 'center')
+            ? (canvas.width/dpr - maxW)/2
+            : canvas.width/dpr * 0.05;
+          const y = 24;
+          drawOutlinedText(ctx, fitted.text, x, y, t.withOutline ?? true);
+          console.log('✅ Top text drawn successfully');
+        }
+
+        // Draw bottom CTA background (gradient for readability)
+        if (bottomText?.text) {
+          const b = bottomText;
+          const linesCount = b.lineClamp ?? 3;
+          const blockH = (b.fontSize ?? 26) * 1.35 * linesCount + 28;
+          const y0 = canvas.height/dpr - blockH - 16;
+          const grd = ctx.createLinearGradient(0, y0, 0, canvas.height/dpr);
+          grd.addColorStop(0, 'rgba(0,0,0,0)');
+          grd.addColorStop(1, 'rgba(0,0,0,0.38)');
+          ctx.fillStyle = grd;
+          ctx.fillRect(0, y0, canvas.width/dpr, blockH + 16);
+
+          ctx.font = `${b.fontWeight ?? 600} ${b.fontSize ?? 26}px Pretendard, system-ui, sans-serif`;
+          const maxW = (b.maxWidthPct ?? 0.9) * canvas.width / dpr;
+          const lines = wrapText(ctx, b.text, maxW).slice(0, b.lineClamp ?? 3);
+          const x = (b.align === 'center') ? (canvas.width/dpr - maxW)/2 : canvas.width/dpr * 0.05;
+          let y = y0 + 16;
+          for (const line of lines) {
+            drawOutlinedText(ctx, line, x, y, b.withOutline ?? false);
+            y += (b.fontSize ?? 26) * 1.25;
+          }
+          console.log('✅ Bottom text drawn successfully');
+        }
+
+        // Legacy caption support (fallback)
+        if (caption && !topText?.text && !bottomText?.text) {
+          console.log('📝 Drawing legacy caption:', caption);
           ctx.font = "bold 40px Nanum Gothic, sans-serif";
           ctx.fillStyle = "#fff";
           ctx.textAlign = "center";
@@ -130,9 +192,7 @@ const EmotionCanvas = forwardRef<HTMLCanvasElement, EmotionCanvasProps>(
           lines.forEach((l, idx) => {
             ctx.fillText(l, width / 2, height - 150 + idx * 48);
           });
-          console.log('✅ Caption drawn successfully');
-        } else {
-          console.log('❌ No caption to draw');
+          console.log('✅ Legacy caption drawn successfully');
         }
         
         console.log('🎨 Canvas drawing completed');
@@ -141,7 +201,7 @@ const EmotionCanvas = forwardRef<HTMLCanvasElement, EmotionCanvasProps>(
       image.onerror = (error) => {
         console.error('❌ Image loading failed:', error);
       };
-    }, [imageUrl, caption, filter]);
+    }, [imageUrl, caption, filter, topText, bottomText]);
 
     return <canvas ref={canvasRef} className="w-full h-auto rounded-xl shadow-lg" />;
   }
