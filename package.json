@@ -9,7 +9,6 @@
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-
     "docs:guard": "node scripts/check-doc-twin.mjs",
     "openapi:lint": "npx @redocly/cli lint docs/openapi.yaml || true",
     "prepare": "husky install"
@@ -50,7 +49,6 @@
     "typescript": "^5.5.3",
     "typescript-eslint": "^8.3.0",
     "vite": "^5.4.2",
-
     "@redocly/cli": "^1.16.0",
     "husky": "^9.0.0",
     "minimatch": "^9.0.3"
