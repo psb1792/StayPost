@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Heart, Sparkles, Coffee, Camera, Palette } from 'lucide-react';
-import { generateCaption, getCachedCaption } from '../../utils/generateCaption';
+import { generateCaption, getCachedCaption, getDefaultPreset } from '../../utils/generateCaption';
+import { StylePreset } from '../../types/StylePreset';
 
 interface Step2EmotionProps {
   selectedEmotion: string;
@@ -11,6 +12,8 @@ interface Step2EmotionProps {
   setGeneratedCaption: (caption: string) => void;
   previewUrl: string | null;
   imageDescription?: string; // 이미지 설명 추가
+  selectedPreset: StylePreset;
+  storeSlug: string;
   next: () => void;
   back: () => void;
 }
@@ -109,6 +112,8 @@ export default function Step2Emotion({
   setGeneratedCaption,
   previewUrl,
   imageDescription,
+  selectedPreset,
+  storeSlug,
   next,
   back
 }: Step2EmotionProps) {
@@ -116,7 +121,13 @@ export default function Step2Emotion({
 
   // 감정과 템플릿이 선택되면 자동으로 캡션 생성
   useEffect(() => {
-    console.log('🔄 Step2 useEffect 트리거:', { selectedEmotion, templateId, previewUrl: !!previewUrl });
+    console.log('🔄 Step2 useEffect 트리거:', { 
+      selectedEmotion, 
+      templateId, 
+      previewUrl: !!previewUrl,
+      hasSelectedEmotion: !!selectedEmotion,
+      hasTemplateId: !!templateId
+    });
     if (selectedEmotion && templateId && previewUrl) {
       generateCaptionHandler();
     }
@@ -130,10 +141,16 @@ export default function Step2Emotion({
     
     try {
       // GPT API를 사용하여 문구 생성
+      console.log("📦 emotion", selectedEmotion);
+      console.log("📦 preset", selectedPreset);
+      console.log("📦 slug", storeSlug);
+      
       const result = await generateCaption({
         emotion: selectedEmotion,
         templateId: templateId,
-        imageDescription // 이미지 설명이 있으면 포함
+        imageDescription, // 이미지 설명이 있으면 포함
+        selectedPreset: selectedPreset || getDefaultPreset(), // 스타일 preset 정보 포함 (fallback 적용)
+        slug: storeSlug // 가게 슬러그 포함
       });
 
       console.log('📝 Step2: 문구 생성 결과', result);
@@ -172,6 +189,20 @@ export default function Step2Emotion({
         <p className="text-lg text-gray-600">
           이미지에 어울리는 감정과 템플릿을 선택해주세요
         </p>
+        
+        {/* 현재 선택 상태 표시 */}
+        <div className="mt-4 flex justify-center space-x-4 text-sm">
+          <div className={`px-3 py-1 rounded-full ${
+            selectedEmotion ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'
+          }`}>
+            감정: {selectedEmotion || '선택되지 않음'}
+          </div>
+          <div className={`px-3 py-1 rounded-full ${
+            templateId ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-600'
+          }`}>
+            템플릿: {templateOptions.find(t => t.id === templateId)?.name || '선택되지 않음'}
+          </div>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -183,7 +214,10 @@ export default function Step2Emotion({
               {emotionOptions.map((emotion) => (
                 <button
                   key={emotion.id}
-                  onClick={() => setSelectedEmotion(emotion.id)}
+                  onClick={() => {
+                    console.log('🎯 감정 선택:', emotion.id);
+                    setSelectedEmotion(emotion.id);
+                  }}
                   className={`p-4 rounded-lg border-2 text-left transition-all ${
                     selectedEmotion === emotion.id
                       ? `${emotion.color} border-current`
@@ -196,10 +230,17 @@ export default function Step2Emotion({
                     }`}>
                       {emotion.icon}
                     </div>
-                    <div>
+                    <div className="flex-1">
                       <div className="font-medium text-gray-900">{emotion.name}</div>
                       <div className="text-sm text-gray-600">{emotion.description}</div>
                     </div>
+                    {selectedEmotion === emotion.id && (
+                      <div className="text-green-600">
+                        <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                        </svg>
+                      </div>
+                    )}
                   </div>
                 </button>
               ))}
@@ -213,7 +254,10 @@ export default function Step2Emotion({
               {templateOptions.map((template) => (
                 <button
                   key={template.id}
-                  onClick={() => setTemplateId(template.id)}
+                  onClick={() => {
+                    console.log('🎯 템플릿 선택:', template.id);
+                    setTemplateId(template.id);
+                  }}
                   className={`p-4 rounded-lg border-2 text-left transition-all ${
                     templateId === template.id
                       ? 'border-blue-500 bg-blue-50'
@@ -226,11 +270,18 @@ export default function Step2Emotion({
                     }`}>
                       {template.icon}
                     </div>
-                    <div>
+                    <div className="flex-1">
                       <div className="font-medium text-gray-900">{template.name}</div>
                       <div className="text-sm text-gray-600">{template.description}</div>
                       <div className="text-xs text-gray-500 mt-1">{template.preview}</div>
                     </div>
+                    {templateId === template.id && (
+                      <div className="text-blue-600">
+                        <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                        </svg>
+                      </div>
+                    )}
                   </div>
                 </button>
               ))}

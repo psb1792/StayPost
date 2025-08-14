@@ -1,8 +1,11 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { ChevronLeft, ChevronRight, Check } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Check, LogOut, User } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import { StylePreset } from '../types/StylePreset';
+import { getDefaultPreset } from '../utils/generateCaption';
+import { useAuth } from '../hooks/useAuth';
 
 import Step1Upload from './steps/Step1_Upload';
 import Step2Emotion from './steps/Step2_Emotion';
@@ -15,14 +18,15 @@ interface StepWizardProps {
 }
 
 export default function StepWizard({ className = '' }: StepWizardProps) {
+  const { user, signOut } = useAuth();
   const [step, setStep] = useState(0);
 
   // Global states shared across steps
   const [uploadedImage, setUploadedImage] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [imageDescription, setImageDescription] = useState<string>(''); // 이미지 설명 추가
-  const [selectedEmotion, setSelectedEmotion] = useState<string>('설렘');
-  const [templateId, setTemplateId] = useState<string>('default_universal');
+  const [selectedEmotion, setSelectedEmotion] = useState<string>('');
+  const [templateId, setTemplateId] = useState<string>('');
   const [generatedCaption, setGeneratedCaption] = useState<string>('');
   const [canvasUrl, setCanvasUrl] = useState<string>('');
   const [seoMeta, setSeoMeta] = useState<{
@@ -38,6 +42,7 @@ export default function StepWizard({ className = '' }: StepWizardProps) {
   });
   const [storeSlug, setStoreSlug] = useState<string>('default');
   const [hasExistingStore, setHasExistingStore] = useState<boolean>(false);
+  const [selectedPreset, setSelectedPreset] = useState<StylePreset>(getDefaultPreset());
 
   // 기존 가게 확인 (자동 Step 진행 방지)
   useEffect(() => {
@@ -66,6 +71,14 @@ export default function StepWizard({ className = '' }: StepWizardProps) {
   const next = () => setStep((s) => Math.min(s + 1, 4));
   const back = () => setStep((s) => Math.max(s - 1, 0));
 
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+    } catch (error) {
+      console.error('Logout failed:', error);
+    }
+  };
+
   const stepTitles = [
     '이미지 업로드',
     '감정 & 스타일',
@@ -84,6 +97,8 @@ export default function StepWizard({ className = '' }: StepWizardProps) {
       setImageDescription={setImageDescription}
       storeSlug={storeSlug}
       setStoreSlug={setStoreSlug}
+      selectedPreset={selectedPreset}
+      setSelectedPreset={setSelectedPreset}
       next={next}
       hasExistingStore={hasExistingStore}
       key={0}
@@ -97,6 +112,8 @@ export default function StepWizard({ className = '' }: StepWizardProps) {
       setGeneratedCaption={setGeneratedCaption}
       previewUrl={previewUrl}
       imageDescription={imageDescription}
+      selectedPreset={selectedPreset}
+      storeSlug={storeSlug}
       next={next}
       back={back}
       key={1}
@@ -108,6 +125,8 @@ export default function StepWizard({ className = '' }: StepWizardProps) {
       templateId={templateId}
       canvasUrl={canvasUrl}
       setCanvasUrl={setCanvasUrl}
+      selectedPreset={selectedPreset}
+      storeSlug={storeSlug}  // storeSlug 추가
       next={next}
       back={back}
       key={2}
@@ -121,6 +140,7 @@ export default function StepWizard({ className = '' }: StepWizardProps) {
       setSeoMeta={setSeoMeta}
       storeSlug={storeSlug}
       setStoreSlug={setStoreSlug}
+      selectedPreset={selectedPreset}
       next={next}
       back={back}
       key={3}
@@ -151,7 +171,8 @@ export default function StepWizard({ className = '' }: StepWizardProps) {
     console.log('🪄 seoMeta:', seoMeta);
     console.log('🪄 storeSlug:', storeSlug);
     console.log('🪄 hasExistingStore:', hasExistingStore);
-  }, [step, uploadedImage, previewUrl, imageDescription, selectedEmotion, templateId, generatedCaption, canvasUrl, seoMeta, storeSlug, hasExistingStore]);
+    console.log('🪄 selectedPreset:', selectedPreset);
+  }, [step, uploadedImage, previewUrl, imageDescription, selectedEmotion, templateId, generatedCaption, canvasUrl, seoMeta, storeSlug, hasExistingStore, selectedPreset]);
   
   return (
     <div className={`min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 ${className}`}>
@@ -163,32 +184,49 @@ export default function StepWizard({ className = '' }: StepWizardProps) {
               <h1 className="text-xl font-semibold text-gray-900">StayPost Generator</h1>
             </div>
             
-            {/* Progress Steps */}
-            <div className="hidden md:flex items-center space-x-4">
-              {stepTitles.map((title, index) => (
-                <div key={index} className="flex items-center">
-                  <div className={`flex items-center justify-center w-8 h-8 rounded-full text-sm font-medium ${
-                    index < step 
-                      ? 'bg-green-500 text-white' 
-                      : index === step 
-                      ? 'bg-blue-500 text-white' 
-                      : 'bg-gray-200 text-gray-600'
-                  }`}>
-                    {index < step ? <Check className="w-4 h-4" /> : index + 1}
-                  </div>
-                  <span className={`ml-2 text-sm font-medium ${
-                    index <= step ? 'text-gray-900' : 'text-gray-500'
-                  }`}>
-                    {title}
-                  </span>
-                  {index < stepTitles.length - 1 && (
-                    <div className={`ml-4 w-8 h-0.5 ${
-                      index < step ? 'bg-green-500' : 'bg-gray-200'
-                    }`} />
-                  )}
+            {/* User Info and Logout */}
+            <div className="flex items-center space-x-4">
+              {user && (
+                <div className="flex items-center space-x-2 text-sm text-gray-600">
+                  <User className="w-4 h-4" />
+                  <span>{user.email}</span>
                 </div>
-              ))}
+              )}
+              <button
+                onClick={handleSignOut}
+                className="flex items-center space-x-1 px-3 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-100 rounded-md transition-colors"
+              >
+                <LogOut className="w-4 h-4" />
+                <span>로그아웃</span>
+              </button>
             </div>
+          </div>
+          
+          {/* Progress Steps */}
+          <div className="hidden md:flex items-center justify-center space-x-4 py-4">
+            {stepTitles.map((title, index) => (
+              <div key={index} className="flex items-center">
+                <div className={`flex items-center justify-center w-8 h-8 rounded-full text-sm font-medium ${
+                  index < step 
+                    ? 'bg-green-500 text-white' 
+                    : index === step 
+                    ? 'bg-blue-500 text-white' 
+                    : 'bg-gray-200 text-gray-600'
+                }`}>
+                  {index < step ? <Check className="w-4 h-4" /> : index + 1}
+                </div>
+                <span className={`ml-2 text-sm font-medium ${
+                  index <= step ? 'text-gray-900' : 'text-gray-500'
+                }`}>
+                  {title}
+                </span>
+                {index < stepTitles.length - 1 && (
+                  <div className={`ml-4 w-8 h-0.5 ${
+                    index < step ? 'bg-green-500' : 'bg-gray-200'
+                  }`} />
+                )}
+              </div>
+            ))}
           </div>
         </div>
       </div>

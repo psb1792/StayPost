@@ -13,6 +13,7 @@ interface Step5ExportProps {
     slug: string;
   };
   storeSlug: string;
+  cardId: string; // cardId 추가
   back: () => void;
 }
 
@@ -23,6 +24,7 @@ export default function Step5Export({
   templateId,
   seoMeta,
   storeSlug,
+  cardId, // cardId 추가
   back
 }: Step5ExportProps) {
   const [copied, setCopied] = useState(false);
@@ -35,7 +37,7 @@ export default function Step5Export({
     setShareUrl(url);
   }, [storeSlug, seoMeta.slug]);
 
-  const downloadImage = () => {
+  const downloadImage = async () => {
     if (!canvasUrl) {
       console.error('❌ No canvas URL available for download');
       alert('다운로드할 이미지가 없습니다.');
@@ -43,16 +45,17 @@ export default function Step5Export({
     }
     
     console.log('📥 Starting image download...');
-    console.log('📥 canvasUrl length:', canvasUrl.length);
     
     try {
-      const link = document.createElement('a');
-      link.download = `staypost-${selectedEmotion}-${Date.now()}.png`;
-      link.href = canvasUrl;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      console.log('✅ Image download initiated');
+      // Storage 이미지 직접 다운로드 (fetch → blob → a.href=objectURL)
+      const res = await fetch(canvasUrl);
+      const blob = await res.blob();
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `emotion_card_${storeSlug}_${cardId}.png`;
+      a.click();
+      URL.revokeObjectURL(a.href);
+      console.log('✅ Image download completed');
     } catch (error) {
       console.error('❌ Download failed:', error);
       alert('다운로드 중 오류가 발생했습니다.');
@@ -84,9 +87,9 @@ export default function Step5Export({
     }
   };
 
-  const copyCaption = () => {
-    const fullCaption = `${generatedCaption}\n\n${seoMeta.hashtags.join(' ')}`;
-    copyToClipboard(fullCaption);
+  const copyCaption = async () => {
+    const text = `${generatedCaption}\n\n${seoMeta.hashtags.map(h => `#${h}`).join(' ')}`;
+    await copyToClipboard(text);
   };
 
   return (
@@ -117,7 +120,7 @@ export default function Step5Export({
                   className="w-full rounded-lg shadow-md"
                 />
                 <div className="mt-2 p-2 bg-green-50 rounded text-sm text-green-700">
-                  ✅ 이미지 준비됨 ({(canvasUrl.length / 1024).toFixed(1)} KB)
+                  ✅ Storage 이미지 준비됨
                 </div>
               </div>
             ) : (

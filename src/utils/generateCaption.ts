@@ -1,3 +1,5 @@
+import { supabase } from '../lib/supabase';
+
 /**
  * GPT API를 사용하여 감정 기반 문구 생성
  * 입력: 감정(emotion), 템플릿(template_id)
@@ -8,12 +10,41 @@ export interface CaptionGenerationParams {
   emotion: string;
   templateId: string;
   imageDescription?: string; // 선택적 이미지 설명
+  selectedPreset?: {
+    tone: string;
+    context: string;
+    rhythm: string;
+    self_projection: string;
+    vocab_color: {
+      generation: string;
+      genderStyle: string;
+      internetLevel: string;
+    };
+  } | null;
+  slug?: string; // 가게 슬러그
 }
 
 export interface CaptionGenerationResult {
   caption: string;
   success: boolean;
   error?: string;
+}
+
+/**
+ * 기본 스타일 preset을 반환하는 함수
+ */
+export function getDefaultPreset() {
+  return {
+    tone: "friendly",
+    context: "customer",
+    rhythm: "balanced",
+    self_projection: "medium",
+    vocab_color: {
+      generation: "genY",
+      genderStyle: "neutral",
+      internetLevel: "none"
+    }
+  };
 }
 
 // 감정별 프롬프트 템플릿
@@ -66,7 +97,9 @@ const templateContexts = {
 export async function generateCaption({
   emotion,
   templateId,
-  imageDescription
+  imageDescription,
+  selectedPreset,
+  slug
 }: CaptionGenerationParams): Promise<CaptionGenerationResult> {
   try {
     // 감정과 템플릿 정보 가져오기
@@ -81,49 +114,47 @@ export async function generateCaption({
       };
     }
 
-    console.log('🚀 GPT API 호출 시작:', { emotion, templateId, imageDescription });
+    console.log('🚀 GPT API 호출 시작:', { emotion, templateId, imageDescription, selectedPreset });
 
-    // Supabase Edge Function URL 설정 (dev/prod 분기)
-    const baseUrl = import.meta.env.DEV 
-      ? 'http://localhost:54321/functions/v1'
-      : `${import.meta.env.VITE_SUPABASE_URL}/functions/v1`;
-    
-    const functionUrl = `${baseUrl}/generate-caption`;
-    
-    console.log('🌐 API URL:', functionUrl);
-    
-    // GPT API 호출
-    const response = await fetch(functionUrl, {
-      method: 'POST',
-      mode: 'cors',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-      },
-      body: JSON.stringify({
-        emotion,
-        templateId,
-        emotionDescription: emotionInfo.description,
-        emotionKeywords: emotionInfo.keywords,
-        templateDescription: templateInfo.description,
-        templateContext: templateInfo.context,
-        imageDescription // 이미지 설명이 있으면 포함
-      }),
-    });
+    // 사용자 세션 확인
+    const { data: { session } } = await supabase.auth.getSession();
+    const accessToken = session?.access_token;
 
-    console.log('📡 API 응답 상태:', response.status, response.statusText);
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      console.error('❌ API 호출 실패:', errorData);
-      throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+    if (!accessToken) {
+      return {
+        caption: '',
+        success: false,
+        error: '로그인이 필요합니다.'
+      };
     }
 
-    const result = await response.json();
-    console.log('✅ GPT API 응답 성공:', result);
+    // Supabase Edge Function 호출
+    const payload = {
+      emotion,
+      templateId,
+      emotionDescription: emotionInfo.description,
+      emotionKeywords: emotionInfo.keywords,
+      templateDescription: templateInfo.description,
+      templateContext: templateInfo.context,
+      imageDescription,
+      selectedPreset: selectedPreset || getDefaultPreset(),
+      slug,
+    };
+
+    const { data, error } = await supabase.functions.invoke('generate-caption', {
+      body: payload,
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+
+    if (error) {
+      console.error('❌ Edge Function 호출 실패:', error);
+      throw error;
+    }
+
+    console.log('✅ GPT API 응답 성공:', data);
     
     return {
-      caption: result.caption,
+      caption: data.caption,
       success: true
     };
 
