@@ -4,10 +4,15 @@ import { supabase, invokeSupabaseFunction } from '../lib/supabase'
 export async function exampleDirectUsage() {
   try {
     // The Supabase client automatically handles authentication tokens
-    const { data, error } = await supabase.functions.invoke('generate-caption', {
+    const { data, error } = await supabase.functions.invoke('generate-final-caption', {
       body: { 
-        emotion: 'cozy',
-        templateId: 'template-1'
+        image_url: 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQ...',
+        style_profile: {
+          emotion: 'cozy',
+          main_features: ['자연광', '모던한 인테리어'],
+          view_type: '도시뷰',
+          emotions: ['평온', '편안함']
+        }
       }
     })
 
@@ -26,10 +31,14 @@ export async function exampleDirectUsage() {
 // Example 2: Using the helper function for cleaner code
 export async function exampleWithHelper(imageUrl: string) {
   try {
-    const { data, error } = await invokeSupabaseFunction('generate-caption', {
-      imageUrl,
-      emotion: 'romantic',
-      templateId: 'template-2'
+    const { data, error } = await invokeSupabaseFunction('generate-final-caption', {
+      image_url: imageUrl,
+      style_profile: {
+        emotion: 'romantic',
+        main_features: ['로맨틱한 분위기', '아늑한 공간'],
+        view_type: '전망뷰',
+        emotions: ['로맨틱', '설렘']
+      }
     })
 
     if (error) {
