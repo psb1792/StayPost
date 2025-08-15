@@ -271,10 +271,10 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
 
-  /functions/v1/generate-caption:
+  /functions/v1/generate-final-caption:
     post:
-      summary: 감정 기반 캡션 생성
-      description: 감정과 템플릿을 기반으로 SNS 캡션을 생성합니다.
+      summary: 최종 캡션 생성
+      description: 이미지와 스타일 프로필을 기반으로 SNS 캡션을 생성합니다.
       tags:
         - Caption
       requestBody:
@@ -284,27 +284,40 @@ paths:
             schema:
               type: object
               properties:
-                emotion:
+                image_url:
                   type: string
-                  description: 선택된 감정
-                  enum: ["설렘", "평온", "즐거움", "로맨틱", "힐링"]
-                  example: "설렘"
-                templateId:
-                  type: string
-                  description: 템플릿 ID
-                  example: "default_universal"
-                storeName:
-                  type: string
-                  description: 스토어 이름
-                  example: "My Guesthouse"
-                placeDesc:
-                  type: string
-                  description: 장소 설명 (선택사항)
-                  example: "아늑한, 따뜻한, 편안한 카페 분위기"
+                  description: 이미지 URL 또는 Base64 데이터
+                  example: "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQ..."
+                style_profile:
+                  type: object
+                  description: 스타일 프로필 정보 (감정, 이미지 메타데이터 포함)
+                  properties:
+                    emotion:
+                      type: string
+                      description: 선택된 감정
+                      enum: ["설렘", "평온", "즐거움", "로맨틱", "힐링"]
+                      example: "설렘"
+                    main_features:
+                      type: array
+                      items:
+                        type: string
+                      description: 이미지의 주요 특징
+                      example: ["자연광", "모던한 인테리어", "넓은 공간"]
+                    view_type:
+                      type: string
+                      description: 뷰 타입
+                      example: "도시뷰"
+                    emotions:
+                      type: array
+                      items:
+                        type: string
+                      description: 이미지에서 느껴지는 감정들
+                      example: ["평온", "편안함", "아늑함"]
+                  required:
+                    - emotion
               required:
-                - emotion
-                - templateId
-                - storeName
+                - image_url
+                - style_profile
       responses:
         '200':
           description: 캡션 생성 성공
@@ -315,8 +328,8 @@ paths:
                 properties:
                   hook:
                     type: string
-                    description: 매력적인 첫 문장
-                    example: "햇살이 머문 오후"
+                    description: 매력적인 첫 문장 (15자 이내)
+                    example: "이곳에서 꿈꾸던 휴식"
                   caption:
                     type: string
                     description: 본문 캡션
@@ -325,13 +338,14 @@ paths:
                     type: array
                     items:
                       type: string
-                    example: ["감성숙소", "스테이포스트", "여행기록"]
-        '422':
-          description: 유효성 검사 오류
+                    description: 해시태그 배열 (5-10개)
+                    example: ["#펜션", "#힐링", "#뷰맛집", "#커플여행"]
+        '400':
+          description: 필수 파라미터 누락
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ValidationError'
+                $ref: '#/components/schemas/Error'
         '500':
           description: OpenAI 키 누락 또는 내부 오류
           content:
