@@ -313,12 +313,15 @@ interface Step2EmotionProps {
   setTemplateId: (templateId: string) => void;
   generatedCaption: string;
   setGeneratedCaption: (caption: string) => void;
+  finalCaption: FinalCaptionResult | null;
+  setFinalCaption: (finalCaption: FinalCaptionResult | null) => void;
   previewUrl: string | null;
   imageDescription?: string; // 이미지 설명
   selectedPreset: StylePreset;
   storeSlug: string;
   next: () => void;
   back: () => void;
+  analyzedStyleProfile: StyleProfile | null; // AI 분석 결과
 }
 ```
 
@@ -345,17 +348,33 @@ const templateOptions = [
 ```
 
 ### 주요 함수들
-- `handleEmotionSelect(emotion)`: 감정 선택 처리
-- `handleTemplateSelect(templateId)`: 템플릿 선택 처리
-- `generateCaption()`: AI를 통한 캡션 생성
-- `regenerateCaption()`: 캡션 재생성
+- `mapStyleProfileToSelections(profile)`: AI 분석 결과를 감정/템플릿으로 매핑
+- `createAdjustedStyleProfile()`: 사용자 조정을 반영한 스타일 프로필 생성
+- `generateCaptionHandler()`: AI 기반 문구 생성 처리
+- `applyAdjustments()`: 조정 옵션 적용
+- `resetAdjustments()`: 조정 옵션 초기화
+
+### State
+```typescript
+const [isGenerating, setIsGenerating] = useState(false);
+const [isInitialized, setIsInitialized] = useState(false);
+const [adjustedStyleProfile, setAdjustedStyleProfile] = useState<StyleProfile | null>(null);
+const [showAdjustments, setShowAdjustments] = useState(false);
+const [adjustments, setAdjustments] = useState({
+  tone_style: 'current' as 'current' | 'friendly' | 'formal' | 'casual' | 'luxury',
+  emotion_intensity: 'current' as 'current' | 'subtle' | 'moderate' | 'intense',
+  target_group: 'current' as 'current' | 'young_adults' | 'families' | 'couples' | 'luxury_clients',
+  writing_rhythm: 'current' as 'current' | 'energetic' | 'balanced' | 'relaxed',
+  generation_style: 'current' as 'current' | 'genZ' | 'genY' | 'genX'
+});
+```
 
 ### 특징
-- 5가지 감정 옵션 (설렘, 평온, 즐거움, 로맨틱, 힐링)
-- 다양한 템플릿 스타일 지원
-- AI 기반 캡션 자동 생성
-- 캡션 수정 및 재생성 기능
-- 이미지 설명을 활용한 캡션 생성
+- **AI 스타일 분석 통합**: AI가 분석한 스타일 프로필을 기반으로 자동 초기값 설정
+- **스마트한 조정 기능**: 톤, 감정 강도, 타겟 그룹, 리듬, 세대 스타일을 세밀하게 조정 가능
+- **스타일 활용 분석**: AI가 각 스타일 요소를 어떻게 활용했는지 상세히 표시
+- **실시간 미리보기**: 조정된 설정을 즉시 반영한 문구 생성
+- **투명한 AI 활용**: 스타일 프로필 활용 과정을 명확히 설명하여 사용자 이해도 향상
 
 ---
 
