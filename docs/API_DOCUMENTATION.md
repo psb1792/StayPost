@@ -84,10 +84,16 @@ Content-Type: application/json
   "image_url": "https://example.com/image.jpg",
   "style_profile": {
     "emotion": "평온",
+    "emotion_level": "medium",
     "tone": "friendly",
-    "context": "marketing",
-    "rhythm": "medium",
-    "selfProjection": "confident"
+    "context": "customer",
+    "rhythm": "balanced",
+    "self_projection": "medium",
+    "vocab_color": {
+      "generation": "genY",
+      "genderStyle": "neutral",
+      "internetLevel": "light"
+    }
   }
 }
 ```
@@ -97,7 +103,15 @@ Content-Type: application/json
 {
   "hook": "이곳에서 꿈꾸던 휴식",
   "caption": "따뜻한 아침, 커피 한 잔과 함께하는 평온한 시간 ☕️\n\n자연 속에서 편안한 휴식을 즐기세요. 완벽한 하루의 시작을 경험해보세요.",
-  "hashtags": ["#펜션", "#힐링", "#아침", "#커피", "#휴식"]
+  "hashtags": ["#펜션", "#힐링", "#아침", "#커피", "#휴식"],
+  "style_analysis": {
+    "emotion_usage": "평온한 감정을 부드러운 어조로 표현하여 편안한 분위기를 조성했습니다.",
+    "tone_usage": "친근한 톤으로 따뜻하고 편안한 느낌을 전달했습니다.",
+    "context_usage": "일반 고객을 대상으로 한 접근 가능한 메시지를 구성했습니다.",
+    "rhythm_usage": "균형잡힌 리듬으로 읽기 편한 문장 구조를 만들었습니다.",
+    "projection_usage": "적당한 감정 이입으로 고객이 경험할 수 있는 감정을 생생하게 묘사했습니다.",
+    "vocab_usage": "Y세대에 적합한 친근하면서도 세련된 어휘를 선택했습니다."
+  }
 }
 ```
 
@@ -514,3 +528,4 @@ curl -X POST 'https://your-project.supabase.co/functions/v1/create-store' \
 | 2025-01-15 | v2.0.0 | 실제 코드 분석 기반 완전 재작성 |
 | 2025-01-15 | v2.1.0 | 문서 동기화 및 최신 변경사항 반영 |
 | 2025-01-15 | v2.2.0 | generate-caption → generate-final-caption API 변경사항 반영 |
+| 2025-01-15 | v2.3.0 | generate-final-caption API에 style_analysis 필드 추가 및 스타일 프로필 구조 개선 |
