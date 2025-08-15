@@ -13,4 +13,12 @@ export interface FinalCaptionResult {
   hook: string;
   caption: string;
   hashtags: string[];
+  style_analysis?: {
+    emotion_usage?: string;
+    tone_usage?: string;
+    context_usage?: string;
+    rhythm_usage?: string;
+    projection_usage?: string;
+    vocab_usage?: string;
+  };
 }

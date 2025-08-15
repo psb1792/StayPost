@@ -57,7 +57,8 @@ export default function useGenerateFinalCaption(): UseGenerateFinalCaptionReturn
       const result: FinalCaptionResult = {
         hook: String(data.hook),
         caption: String(data.caption),
-        hashtags: hashtagsArray
+        hashtags: hashtagsArray,
+        style_analysis: data.style_analysis || undefined
       };
 
       console.log('✅ 최종 캡션 생성 완료:', {

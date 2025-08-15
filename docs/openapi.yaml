@@ -290,31 +290,62 @@ paths:
                   example: "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQ..."
                 style_profile:
                   type: object
-                  description: 스타일 프로필 정보 (감정, 이미지 메타데이터 포함)
+                  description: AI 스타일 분석 결과 및 사용자 조정 설정
                   properties:
                     emotion:
                       type: string
-                      description: 선택된 감정
+                      description: 주요 감정
                       enum: ["설렘", "평온", "즐거움", "로맨틱", "힐링"]
-                      example: "설렘"
-                    main_features:
-                      type: array
-                      items:
-                        type: string
-                      description: 이미지의 주요 특징
-                      example: ["자연광", "모던한 인테리어", "넓은 공간"]
-                    view_type:
+                      example: "평온"
+                    emotion_level:
                       type: string
-                      description: 뷰 타입
-                      example: "도시뷰"
-                    emotions:
-                      type: array
-                      items:
-                        type: string
-                      description: 이미지에서 느껴지는 감정들
-                      example: ["평온", "편안함", "아늑함"]
+                      description: 감정 강도
+                      enum: ["low", "medium", "high"]
+                      example: "medium"
+                    tone:
+                      type: string
+                      description: 톤 스타일
+                      enum: ["friendly", "formal", "casual", "luxury"]
+                      example: "friendly"
+                    context:
+                      type: string
+                      description: 타겟 컨텍스트
+                      enum: ["customer", "business", "family", "couple", "luxury"]
+                      example: "customer"
+                    rhythm:
+                      type: string
+                      description: 글쓰기 리듬
+                      enum: ["fast", "balanced", "slow"]
+                      example: "balanced"
+                    self_projection:
+                      type: string
+                      description: 자기 투영 수준
+                      enum: ["low", "medium", "high"]
+                      example: "medium"
+                    vocab_color:
+                      type: object
+                      description: 어휘 색깔 설정
+                      properties:
+                        generation:
+                          type: string
+                          description: 세대별 어휘
+                          enum: ["genX", "genY", "genZ"]
+                          example: "genY"
+                        genderStyle:
+                          type: string
+                          description: 성별 스타일
+                          enum: ["neutral", "feminine", "masculine"]
+                          example: "neutral"
+                        internetLevel:
+                          type: string
+                          description: 인터넷 수준
+                          enum: ["none", "light", "heavy"]
+                          example: "light"
                   required:
                     - emotion
+                    - tone
+                    - context
+                    - rhythm
               required:
                 - image_url
                 - style_profile
@@ -340,6 +371,34 @@ paths:
                       type: string
                     description: 해시태그 배열 (5-10개)
                     example: ["#펜션", "#힐링", "#뷰맛집", "#커플여행"]
+                  style_analysis:
+                    type: object
+                    description: AI가 스타일 프로필을 어떻게 활용했는지 설명
+                    properties:
+                      emotion_usage:
+                        type: string
+                        description: 감정과 강도 활용 설명
+                        example: "평온한 감정을 부드러운 어조로 표현하여 편안한 분위기를 조성했습니다."
+                      tone_usage:
+                        type: string
+                        description: 톤 활용 설명
+                        example: "친근한 톤으로 따뜻하고 편안한 느낌을 전달했습니다."
+                      context_usage:
+                        type: string
+                        description: 컨텍스트 활용 설명
+                        example: "일반 고객을 대상으로 한 접근 가능한 메시지를 구성했습니다."
+                      rhythm_usage:
+                        type: string
+                        description: 리듬 활용 설명
+                        example: "균형잡힌 리듬으로 읽기 편한 문장 구조를 만들었습니다."
+                      projection_usage:
+                        type: string
+                        description: 자기 투영 활용 설명
+                        example: "적당한 감정 이입으로 고객이 경험할 수 있는 감정을 생생하게 묘사했습니다."
+                      vocab_usage:
+                        type: string
+                        description: 어휘 색깔 활용 설명
+                        example: "Y세대에 적합한 친근하면서도 세련된 어휘를 선택했습니다."
         '400':
           description: 필수 파라미터 누락
           content:
