@@ -204,11 +204,25 @@ export function useSimplifiedState() {
     
     setIsLoading(true);
     try {
-      const result = await fetch('/api/generate-caption', {
+      // 1. 이미지 메타데이터 생성
+      const imageBase64 = await convertFileToBase64(image);
+      const metaResult = await fetch('/functions/v1/generate-image-meta', {
         method: 'POST',
-        body: JSON.stringify({ image, emotion })
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ imageBase64 })
       });
-      const data = await result.json();
+      const imageMeta = await metaResult.json();
+      
+      // 2. 최종 캡션 생성
+      const captionResult = await fetch('/functions/v1/generate-final-caption', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          image_url: imageBase64,
+          style_profile: { emotion, ...imageMeta }
+        })
+      });
+      const data = await captionResult.json();
       setCaption(data.caption);
     } catch (error) {
       console.error('Failed to generate caption:', error);
@@ -230,14 +244,38 @@ export function useSimplifiedState() {
 ### Step 3: 단순화된 API 구조
 
 ```typescript
-// supabase/functions/generate-caption/index.ts
+// supabase/functions/generate-final-caption/index.ts
 export async function handler(req: Request) {
-  const { image, emotion } = await req.json();
+  const { image_url, style_profile } = await req.json();
   
-  // OpenAI API 호출
-  const caption = await generateCaption(image, emotion);
+  // OpenAI GPT-4o API 호출
+  const response = await fetch("https://api.openai.com/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${OPENAI_API_KEY}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model: "gpt-4o",
+      response_format: { type: "json_object" },
+      messages: [
+        {
+          role: "system",
+          content: "당신은 숙소 홍보용 문구를 작성하는 전문 카피라이터입니다..."
+        },
+        {
+          role: "user", 
+          content: `스타일 프로필: ${JSON.stringify(style_profile)}`
+        }
+      ],
+      max_tokens: 300,
+      temperature: 0.7
+    })
+  });
   
-  return new Response(JSON.stringify({ caption }), {
+  const { hook, caption, hashtags } = await response.json();
+  
+  return new Response(JSON.stringify({ hook, caption, hashtags }), {
     headers: { 'Content-Type': 'application/json' }
   });
 }

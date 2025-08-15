@@ -422,6 +422,13 @@ Storage: Supabase Storage
 **결정**: HTML5 Canvas API를 사용한 실시간 편집 기능 구현  
 **결과**: 사용자 맞춤형 콘텐츠 생성 가능, 사용자 만족도 향상
 
+### ADR-006: 2단계 캡션 생성 프로세스 도입
+**날짜**: 2025-01-15  
+**상태**: 승인됨  
+**컨텍스트**: 기존 generate-caption API의 단순한 감정 기반 캡션 생성이 이미지 분석 부족으로 인한 품질 한계  
+**결정**: generate-image-meta + generate-final-caption 2단계 프로세스로 변경하여 이미지 분석 기반 고품질 캡션 생성  
+**결과**: 캡션 품질 향상, 이미지 특성 반영 개선, 스타일 프로필 기반 맞춤형 생성
+
 ## 📋 Changelog
 
 ### v0.0.0 (2025-01-15)
@@ -432,6 +439,11 @@ Storage: Supabase Storage
 - ✅ 3단계 워크플로우 구현
 - ✅ EmotionCanvas 실시간 편집 기능
 - ✅ Edge Functions 구현
+
+### v0.1.0 (2025-01-15)
+- ✅ generate-caption → generate-final-caption API 구조 변경
+- ✅ 2단계 캡션 생성 프로세스 도입 (이미지 메타데이터 → 최종 캡션)
+- ✅ 스타일 프로필 기반 캡션 생성으로 개선
 
 ### v0.1.0 (예정)
 - 🔄 Edge Functions 최적화
