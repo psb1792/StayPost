@@ -140,6 +140,7 @@ export default function StepWizard({ className = '' }: StepWizardProps) {
       seoMeta={seoMeta}
       setSeoMeta={setSeoMeta}
       back={back}
+      analyzedStyleProfile={analyzedStyleProfile}  // 추가
       key={2}
     />,
   ];
