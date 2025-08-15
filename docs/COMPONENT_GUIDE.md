@@ -533,3 +533,4 @@ const [bottomTextAlign, setBottomTextAlign] = useState<'left' | 'center'>('left'
 | 2025-01-15 | v1.2.0 | 공통 패턴 및 주의사항 추가 |
 | 2025-01-15 | v2.0.0 | 실제 코드 분석 기반 완전 재작성 |
 | 2025-01-15 | v2.1.0 | 문서 동기화 및 최신 변경사항 반영 |
+| 2025-01-15 | v2.2.0 | StepWizard 및 Step3_Result 컴포넌트 최신 변경사항 반영 |
