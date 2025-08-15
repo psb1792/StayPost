@@ -1,4 +1,4 @@
-CREATE TABLE store_profiles (
+CREATE TABLE IF NOT EXISTS store_profiles (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   store_slug text UNIQUE NOT NULL,
   store_name text NOT NULL,
@@ -10,6 +10,7 @@ CREATE TABLE store_profiles (
 ALTER TABLE store_profiles ENABLE ROW LEVEL SECURITY;
 
 -- Create policy: allow all inserts during development
+DROP POLICY IF EXISTS "Allow all inserts for now" ON public.store_profiles;
 CREATE POLICY "Allow all inserts for now"
   ON public.store_profiles
   FOR INSERT

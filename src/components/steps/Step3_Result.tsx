@@ -3,6 +3,7 @@ import { Download, RefreshCw, Eye, Save, Copy, Check, Share2, ExternalLink, Hear
 import { supabase } from '@/lib/supabase';
 import EmotionCanvas from '@/components/EmotionCanvas';
 import { StylePreset } from '@/types/StylePreset';
+import { StyleProfile } from '@/hooks/useAnalyzeStyle';
 import { exportEmotionCard } from '@/utils/exportEmotionCard';
 import { makeHookFromCaption } from '@/utils/makeHookFromCaption';
 import { downloadImage, copyCaption, shareNativeOrFallback } from '@/utils/export';
@@ -45,6 +46,7 @@ interface Step3ResultProps {
   };
   setSeoMeta: (seoMeta: any) => void;
   back: () => void;
+  analyzedStyleProfile: StyleProfile | null;  // 추가
 }
 
 export default function Step3Result({
@@ -60,7 +62,8 @@ export default function Step3Result({
   setCardId,
   seoMeta,
   setSeoMeta,
-  back
+  back,
+  analyzedStyleProfile
 }: Step3ResultProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -204,7 +207,9 @@ export default function Step3Result({
           keywords: [selectedEmotion, storeSlug],
           hashtags: [`#${selectedEmotion}`, `#${storeSlug}`],
           slug: storeSlug
-        }
+        },
+        style_profile: analyzedStyleProfile,  // 추가
+        style_analysis: finalCaption?.style_analysis,  // 추가
       });
 
       if (!result.ok) {
