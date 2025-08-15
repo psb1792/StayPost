@@ -17,6 +17,8 @@ type ExportArgs = {
   emotion: string;
   templateId: string;
   seoMeta: SeoMeta;
+  style_profile?: any;  // 추가
+  style_analysis?: string;  // 추가
 };
 
 type Ok = { ok: true; imageUrl: string; cardId: string; key: string };
@@ -69,6 +71,8 @@ export async function exportEmotionCard(args: ExportArgs): Promise<ExportEmotion
         emotion: args.emotion,
         template_id: args.templateId,
         seo_meta: args.seoMeta, // JSONB
+        style_profile: args.style_profile,  // 추가
+        style_analysis: args.style_analysis,  // 추가
       })
       .select('id')
       .single();
