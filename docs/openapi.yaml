@@ -635,3 +635,8 @@ tags:
     description: 스토어 관리 관련 엔드포인트
   - name: Auth
     description: 인증 관련 엔드포인트
+
+# Changelog
+# 2025-01-15: Initial OpenAPI specification
+# 2025-01-15: Added Edge Functions endpoints
+# 2025-01-15: Updated API structure and documentation

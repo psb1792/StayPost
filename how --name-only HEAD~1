@@ -1,0 +1,12 @@
+[33mcommit 70a1c1c94b05e4a0308a56c2b0598f0aa12ef205[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mchore/code-and-docs-boot[m[33m, [m[1;31morigin/chore/code-and-docs-boot[m[33m)[m
+Author: psb1792 <psb1792@gmail.com>
+Date:   Fri Aug 15 17:29:19 2025 +0900
+
+     Fix GitLeaks security issues - Add environment files to .gitignore - Create .env.example templates - Update README with security guidelines - Remove gitleaks_report.json
+
+.env.example
+.gitignore
+README.md
+gitleaks_report.json
+netlify.toml
+supabase/functions/.env.example
