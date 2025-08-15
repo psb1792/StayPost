@@ -8,7 +8,7 @@ pnpm-debug.log*
 lerna-debug.log*
 
 node_modules
-dist
+dist/
 dist-ssr
 *.local
 
@@ -22,6 +22,12 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
-.env
 
-echo "gitleaks_report.json" >> .gitignore
+# Environment files
+.env
+.env.local
+.env.*
+supabase/functions/.env
+
+# Security reports
+gitleaks_report.json

@@ -17,6 +17,13 @@
 
 프로젝트 루트에 `.env.local` 파일을 생성하고 다음 내용을 추가하세요:
 
+```bash
+# 환경 변수 파일 복사
+cp .env.example .env.local
+```
+
+또는 직접 `.env.local` 파일을 생성하고 다음 내용을 추가하세요:
+
 ```env
 # OpenAI API Configuration
 OPENAI_API_KEY=your_openai_api_key_here
@@ -24,7 +31,16 @@ OPENAI_API_KEY=your_openai_api_key_here
 # Supabase Configuration (기존 설정이 있다면 유지)
 VITE_SUPABASE_URL=your_supabase_url_here
 VITE_SUPABASE_ANON_KEY=your_supabase_anon_key_here
+
+# Server Configuration
+PORT=5001
+CLIPDROP_API_KEY=your_clipdrop_api_key_here
+
+# Development Configuration
+VITE_LOG_LEVEL=info
 ```
+
+**⚠️ 보안 주의사항**: `.env.local` 파일은 절대 Git에 커밋하지 마세요. 이 파일은 `.gitignore`에 포함되어 있습니다.
 
 ### 2. OpenAI API 키 발급
 
