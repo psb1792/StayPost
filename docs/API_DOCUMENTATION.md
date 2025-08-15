@@ -529,3 +529,4 @@ curl -X POST 'https://your-project.supabase.co/functions/v1/create-store' \
 | 2025-01-15 | v2.1.0 | 문서 동기화 및 최신 변경사항 반영 |
 | 2025-01-15 | v2.2.0 | generate-caption → generate-final-caption API 변경사항 반영 |
 | 2025-01-15 | v2.3.0 | generate-final-caption API에 style_analysis 필드 추가 및 스타일 프로필 구조 개선 |
+| 2025-01-15 | v2.4.0 | 문서 동기화 및 최신 변경사항 반영 |
