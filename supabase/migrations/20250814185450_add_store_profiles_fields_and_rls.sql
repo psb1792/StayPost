@@ -11,11 +11,13 @@ ALTER TABLE public.store_profiles ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Allow authenticated users to update stores" ON public.store_profiles;
 DROP POLICY IF EXISTS "Allow authenticated users to create stores" ON public.store_profiles;
 
--- 4) 새 정책: 본인 소유만 INSERT/UPDATE
+-- 4) 새 정책: 본인 소유만 INSERT/UPDATE (이미 존재하면 스킵)
+DROP POLICY IF EXISTS "store_profiles_insert_own" ON public.store_profiles;
 CREATE POLICY "store_profiles_insert_own"
 ON public.store_profiles FOR INSERT TO authenticated
 WITH CHECK (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "store_profiles_update_own" ON public.store_profiles;
 CREATE POLICY "store_profiles_update_own"
 ON public.store_profiles FOR UPDATE TO authenticated
 USING (auth.uid() = user_id);
