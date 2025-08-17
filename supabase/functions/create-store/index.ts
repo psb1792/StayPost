@@ -74,7 +74,7 @@ Deno.serve(async (req: Request) => {
       .from('store_profiles')
       .insert({
         store_name: storeName,
-        slug: asciiSlug
+        store_slug: asciiSlug
       })
       .select()
       .single()

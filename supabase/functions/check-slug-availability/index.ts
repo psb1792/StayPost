@@ -50,8 +50,8 @@ Deno.serve(async (req: Request) => {
     // Check if slug exists
     const { data: existingStore, error } = await supabase
       .from('store_profiles')
-      .select('slug')
-      .eq('slug', slug)
+      .select('store_slug')
+      .eq('store_slug', slug)
       .single()
 
     if (error && error.code !== 'PGRST116') { // PGRST116 = no rows returned
@@ -74,10 +74,10 @@ Deno.serve(async (req: Request) => {
       // Get all slugs that start with the base slug
       const { data: similarSlugs } = await supabase
         .from('store_profiles')
-        .select('slug')
-        .like('slug', `${slug}%`)
+        .select('store_slug')
+        .like('store_slug', `${slug}%`)
 
-      const existingSlugs = similarSlugs?.map(s => s.slug) || []
+      const existingSlugs = similarSlugs?.map(s => s.store_slug) || []
       
       // Generate a unique slug
       let counter = 2

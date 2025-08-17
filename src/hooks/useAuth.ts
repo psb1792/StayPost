@@ -22,18 +22,45 @@ export function useAuth() {
     }
   };
 
-  // 로그인 함수
-  const signIn = async () => {
+  // Google OAuth 로그인 함수
+  const signInWithGoogle = async () => {
     try {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: window.location.origin
+          redirectTo: `${window.location.origin}/auth/callback`
         }
       });
+      
       if (error) throw error;
     } catch (error) {
-      console.error('Error signing in:', error);
+      console.error('Error signing in with Google:', error);
+      throw error;
+    }
+  };
+
+  // 테스트 계정 로그인 함수 (백업용)
+  const signInWithTestAccount = async () => {
+    try {
+      const { error } = await supabase.auth.signInWithPassword({
+        email: 'test@example.com',
+        password: 'testpassword123'
+      });
+      
+      if (error) {
+        // 계정이 없으면 회원가입 시도
+        if (error.message.includes('Invalid login credentials')) {
+          const { error: signUpError } = await supabase.auth.signUp({
+            email: 'test@example.com',
+            password: 'testpassword123'
+          });
+          if (signUpError) throw signUpError;
+        } else {
+          throw error;
+        }
+      }
+    } catch (error) {
+      console.error('Error signing in with test account:', error);
       throw error;
     }
   };
@@ -71,7 +98,8 @@ export function useAuth() {
     user,
     session,
     loading,
-    signIn,
+    signInWithGoogle,
+    signInWithTestAccount,
     signOut,
     checkAuthStatus
   };

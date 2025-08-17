@@ -1,0 +1,198 @@
+---
+description: ailoadmap phase 2 개발시
+alwaysApply: false
+---
+# **Phase 2 AI 시스템 구현 최종 기술 로드맵**
+
+이 문서는 기존의 두 로드맵을 통합하여, LangChain과 LlamaIndex의 구체적인 모듈을 적용해 Phase 2 AI 기능을 고도화하는 최종 기술 로드맵을 제시합니다. 아키텍처는 LlamaIndex를 활용한 Python 기반의 인덱싱/추론 마이크로서비스와 LangChain JS를 활용한 JavaScript 기반의 생성/판정 계층으로 구성하는 하이브리드 접근 방식을 권장합니다.
+
+### **아키텍처 개요**
+
+- **인덱스 계층 (LlamaIndex - Python Microservice 권장)**:
+    - **`VectorStoreIndex`**: 문구 스타일, 성공 사례 등 의미 기반 검색을 담당합니다.
+    - **`KeywordTableIndex`**: 금지어, 정책, 체크리스트 등 키워드 기반 검색을 담당합니다.
+    - **`KnowledgeGraphIndex` / `PropertyGraphIndex`**: '감정-톤-타겟'과 같은 규칙과 관계를 그래프로 저장하여 정교한 추론을 수행합니다.
+    - **`RouterQueryEngine`**: 위 인덱스들을 통합하여 사용자 쿼리의 성격에 맞게 최적의 인덱스로 동적으로 라우팅합니다.
+- **생성/판정 계층 (LangChain JS - Supabase Edge Functions 권장)**:
+    - 이미지(Vision)와 텍스트를 함께 입력받아, `withStructuredOutput`을 통해 신뢰도 높은 구조화된 JSON 결과를 생성합니다.
+- **로그/관측 계층 (Supabase)**:
+    - AI의 모든 결정 과정을 재현하고 분석할 수 있도록 Supabase 테이블에 JSON 형태로 로그를 저장합니다.
+
+---
+
+### **Phase 1: 기반 인프라 구축 (1-2일)**
+
+- **1.1 가게 정보 저장 시스템**: 기존 DB 스키마를 확장합니다.
+- **1.2 AI 호출 통합 시스템**: LangChain Expression Language (LCEL)를 기본 구조로 채택하여 재시도, 폴백(Fallback) 로직을 유연하게 구현합니다.
+- **1.3 연관 단어 데이터베이스**: LlamaIndex의 Vector, Keyword, Knowledge Graph 인덱스를 활용할 기초 데이터베이스를 구축합니다.
+
+---
+
+### **Phase 2: AI 기능 구현 (Technical Deep Dive)**
+
+### **2.1 1단계: 이미지 적합성 판단**
+
+이미지와 가게 정보(텍스트)를 종합적으로 분석하여 구조화된 판단 결과를 도출하는 Multi-modal 작업입니다.
+
+- **⚙️ 추천 기술**: LangChain JS의 `ChatOpenAI` (Vision 모델) + `withStructuredOutput(Zod)`.
+- **💡 선정 이유**:
+    - Vision 모델(예: GPT-4o)은 이미지와 텍스트의 맥락을 함께 분석할 수 있습니다.
+    - `withStructuredOutput` 또는 Python의 `PydanticOutputParser`를 사용하면, LLM의 응답을 `{ suitable, score, issues[], suggestions[] }`와 같은 고정된 JSON 스키마로 강제할 수 있어 시스템 연동 안정성이 크게 향상됩니다.
+- **📄 코드 예시 (TypeScript, Edge Function)**:TypeScript
+    
+    `import { ChatOpenAI } from "@langchain/openai";
+    import { z } from "zod";
+    
+    const ResultSchema = z.object({
+      suitable: z.boolean(),
+      score: z.number().min(0).max(100),
+      issues: z.array(z.string()).default([]),
+      suggestions: z.array(z.string()).default([]),
+    });
+    
+    export async function checkImageSuitability({ imageUrl, storeMeta }) {
+      const model = new ChatOpenAI({ model: "gpt-4o" });
+      const structuredModel = model.withStructuredOutput(ResultSchema);
+    
+      const prompt = [
+        { role: "system", content: "펜션 인스타그램 이미지 적합성 평가자. JSON만 반환." },
+        {
+          role: "user",
+          content: [
+            { type: "text", text: `가게 정보: ${JSON.stringify(storeMeta)}` },
+            { type: "image_url", image_url: imageUrl }
+          ]
+        }
+      ];
+      return await structuredModel.invoke(prompt);
+    }`
+    
+
+---
+
+### **2.2 2단계: 파라미터 + 템플릿 추천**
+
+사용자 요청과 가게 정보에 따라 최적의 문구 파라미터(감정, 톤, 타겟)와 템플릿을 추천하는 복합 RAG(Retrieval-Augmented Generation) 작업입니다.
+
+- **⚙️ 추천 기술**: LlamaIndex의 `RouterQueryEngine`을 중심으로 `VectorStoreIndex`, `KeywordTableIndex`, `KnowledgeGraphIndex`를 조합하여 사용합니다.
+- **💡 선정 이유**:
+    - **`RouterQueryEngine`**: 사용자 쿼리의 의도를 파악해 "의미 검색", "키워드 검색", "관계 추론" 중 가장 적합한 인덱스(도구)를 동적으로 선택하여 정확도를 극대화합니다.
+    - **`KnowledgeGraphIndex`**: '감정-톤-타겟' 간의 복잡한 관계 규칙을 그래프로 저장해, 단순 검색을 넘어선 정교한 추론 기반의 추천을 제공합니다.
+- **📄 코드 예시 (Python, LlamaIndex Microservice)**:Python
+    
+    `from llama_index.core import VectorStoreIndex, KeywordTableIndex, KnowledgeGraphIndex
+    from llama_index.core.query_engine import RouterQueryEngine
+    from llama_index.core.tools import QueryEngineTool
+    from llama_index.core.selectors import PydanticSingleSelector
+    
+    # 1. 각 목적에 맞는 인덱스 및 쿼리 엔진 생성
+    vector_engine = VectorStoreIndex.from_documents(vector_docs).as_query_engine()
+    keyword_engine = KeywordTableIndex.from_documents(keyword_docs).as_query_engine()
+    kg_engine = KnowledgeGraphIndex.from_documents(graph_docs).as_query_engine()
+    
+    # 2. 각 엔진을 'Tool'로 정의
+    vector_tool = QueryEngineTool.from_defaults(query_engine=vector_engine, description="의미적으로 유사한 콘셉트나 스타일을 찾을 때 유용합니다.")
+    keyword_tool = QueryEngineTool.from_defaults(query_engine=keyword_engine, description="프로모션이나 금지어 같은 특정 키워드를 조회할 때 유용합니다.")
+    graph_tool = QueryEngineTool.from_defaults(query_engine=kg_engine, description="감정, 톤, 타겟 간의 관계를 이해할 때 유용합니다.")
+    
+    # 3. 라우터 쿼리 엔진 설정
+    query_engine = RouterQueryEngine(
+        selector=PydanticSingleSelector.from_defaults(),
+        query_engine_tools=[vector_tool, keyword_tool, graph_tool]
+    )
+    
+    # 4. 라우터에 질문하면 가장 적합한 도구를 스스로 찾아 답변 생성
+    response = query_engine.query("따뜻하고 아늑한 느낌의 문구 스타일 추천해줘") # vector_tool 선택
+    response_2 = query_engine.query("40대 남성에게 어울리는 정중한 톤은 어떤 특징이 있어?") # graph_tool 선택`
+    
+
+---
+
+### **2.3 3단계: 사용자 요청 기반 문구 생성**
+
+사용자 요청에서 의도를 추출하고, 추천된 파라미터와 RAG를 통해 수집된 근거를 조합하여 최종 광고 문구를 생성합니다.
+
+- **⚙️ 추천 기술**: LangChain JS의 `withStructuredOutput`으로 사용자 의도(Intent)를 먼저 파싱한 후, LlamaIndex 라우터 API를 호출하여 관련 정보를 검색하고, 이 모든 정보를 `PromptTemplate`에 결합하여 LLM을 호출합니다.
+- **💡 선정 이유**:
+    - 사용자의 모호한 요청을 `{emotion, tone, target, ...}` 형태의 명확한 파라미터로 먼저 구조화하여 생성 과정의 안정성을 높입니다.
+    - '연관 단어 DB'에서 검색된 관련 정보(Context)를 LLM에 함께 제공하여, 허위 정보(Hallucination)를 줄이고 가게의 톤앤매너에 맞는 결과물을 생성하도록 유도합니다(Grounding).
+- **📄 코드 예시 (TypeScript, Edge Function)**:TypeScript
+    
+    `// 1. 사용자 요청에서 의도(Intent)를 구조화하여 추출
+    const intent = await parseIntent.invoke("따뜻한 느낌으로 짧고 강렬하게 써주세요");
+    // 결과: { emotion: "따뜻함", desired_length: "short", ... }
+    
+    // 2. 추출된 의도를 기반으로 LlamaIndex 라우터 API에 관련 정보 요청
+    const evidence = await fetch(process.env.ROUTER_API, {
+      method: "POST",
+      body: JSON.stringify({ query: `의도:${JSON.stringify(intent)}` })
+    }).then(r => r.json());
+    
+    // 3. 의도와 근거 정보를 프롬프트에 담아 최종 문구 생성
+    const prompt = `...
+    - 의도: ${JSON.stringify(intent)}
+    - 근거: ${JSON.stringify(evidence)}
+    ...`;
+    return await llm.invoke(prompt);`
+    
+
+---
+
+### **2.4 4단계: AI 결정 과정 로깅**
+
+AI가 어떤 판단과정을 거쳤는지 추적하고 분석하기 위해 모든 단계의 입출력과 근거를 데이터베이스에 저장합니다.
+
+- **⚙️ 추천 기술**: Supabase 테이블에 단계별 결정 로그를 JSON 형태로 저장합니다.
+- **💡 선정 이유**:
+    - 장애 발생 시 원인 분석 및 재현이 용이해집니다.
+    - 어떤 라우터가 선택되었는지, 어떤 근거로 결과가 생성되었는지 추적하여 시스템을 지속적으로 개선할 수 있습니다.
+- **📄 로그 스키마 예시**:JSON
+    
+    `{
+      "step": "2.2",
+      "input": { "imageSummary": "...", "storeMeta": "..." },
+      "retrieval": { "route": "graph", "sources": ["..."] },
+      "output": { "params": { "tone": "정중", ... } },
+      "metrics": { "latency_ms": 1200, "model": "gpt-4o" }
+    }`
+    
+
+---
+
+### **2.5 5단계: 최종 태그 생성**
+
+완성된 문구와 가게 정보를 바탕으로 인스타그램에 최적화된 해시태그를 생성합니다.
+
+- **⚙️ 추천 기술**: LangChain의 `LLMChain` (LCEL 형태)과 `StringOutputParser`를 사용하되, LlamaIndex 라우터를 통해 금지어/브랜드 정책 등의 가이드를 먼저 조회합니다.
+- **💡 선정 이유**:
+    - 단순 생성이 아닌, `KeywordTableIndex` 등에 저장된 규칙(예: 금지어, 필수 브랜드 태그)을 먼저 조회하고 이를 바탕으로 생성하여 태그의 품질과 일관성을 보장합니다.
+    - 기본적인 `LLMChain`과 `StringOutputParser`는 이 작업에 충분히 효율적이며, 결과물을 문자열 목록으로 깔끔하게 처리할 수 있습니다.
+- **📄 코드 예시 (Python)**:Python
+    
+    `from langchain_openai import ChatOpenAI
+    from langchain.prompts import ChatPromptTemplate
+    from langchain_core.output_parsers import StrOutputParser
+    
+    # (사전 단계: LlamaIndex 라우터로 태그 생성 가이드 조회)
+    # evidence = router.query("해시태그 생성 시 금지어 목록 알려줘")
+    
+    prompt = ChatPromptTemplate.from_template(
+        """인스타그램 마케팅 전문가로서, 아래 게시물과 가게 정보, 가이드를 바탕으로 최적의 해시태그 10개를 생성하세요.
+        게시물: {post_content}
+        가게 정보: {store_info}
+        가이드: {evidence}
+        결과는 다음 형식이어야 합니다: #태그1 #태그2 #태그3 ..."""
+    )
+    model = ChatOpenAI(model="gpt-4o")
+    parser = StrOutputParser()
+    chain = prompt | model | parser
+    
+    hashtags = chain.invoke({
+        "post_content": "새롭게 선보이는 햇살 가득한 원두, 지금 만나보세요!",
+        "store_info": "서울 성수동에 위치한 스페셜티 커피 전문점",
+        "evidence": "..."
+    })
+    print(hashtags)`
+
+
+

@@ -24,7 +24,7 @@ function djb2(str: string): number {
  */
 export function toAsciiSlug(raw: string): string {
   // 1. ASCII 정규화 및 필터링
-  const ascii = (raw ?? '').normalize('NFKD').replace(/[^\x00-\x7F]/g, '');
+  const ascii = (raw ?? '').normalize('NFKD').replace(/[^\u0000-\u007F]/g, '');
   
   // 2. 기본 ASCII 변환
   const base = ascii.toLowerCase()

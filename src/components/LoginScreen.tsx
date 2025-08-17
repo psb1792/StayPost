@@ -1,17 +1,30 @@
 import React from 'react';
-import { LogIn, Loader2 } from 'lucide-react';
+import { LogIn, Loader2, Chrome } from 'lucide-react';
 
 interface LoginScreenProps {
-  onSignIn: () => Promise<void>;
+  onSignInWithGoogle: () => Promise<void>;
+  onSignInWithTestAccount: () => Promise<void>;
   loading?: boolean;
 }
 
-export default function LoginScreen({ onSignIn, loading = false }: LoginScreenProps) {
-  const handleSignIn = async () => {
+export default function LoginScreen({ 
+  onSignInWithGoogle, 
+  onSignInWithTestAccount, 
+  loading = false 
+}: LoginScreenProps) {
+  const handleGoogleSignIn = async () => {
     try {
-      await onSignIn();
+      await onSignInWithGoogle();
     } catch (error) {
-      console.error('Login failed:', error);
+      console.error('Google login failed:', error);
+    }
+  };
+
+  const handleTestAccountSignIn = async () => {
+    try {
+      await onSignInWithTestAccount();
+    } catch (error) {
+      console.error('Test account login failed:', error);
     }
   };
 
@@ -26,7 +39,29 @@ export default function LoginScreen({ onSignIn, loading = false }: LoginScreenPr
           
           <div className="space-y-4">
             <button
-              onClick={handleSignIn}
+              onClick={handleGoogleSignIn}
+              disabled={loading}
+              className="w-full flex items-center justify-center px-4 py-3 border border-gray-300 text-base font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm"
+            >
+              {loading ? (
+                <Loader2 className="w-5 h-5 animate-spin mr-2" />
+              ) : (
+                <Chrome className="w-5 h-5 mr-2" />
+              )}
+              {loading ? '로그인 중...' : 'Google로 로그인'}
+            </button>
+            
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-gray-300" />
+              </div>
+              <div className="relative flex justify-center text-sm">
+                <span className="px-2 bg-white text-gray-500">또는</span>
+              </div>
+            </div>
+            
+            <button
+              onClick={handleTestAccountSignIn}
               disabled={loading}
               className="w-full flex items-center justify-center px-4 py-3 border border-transparent text-base font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
@@ -35,13 +70,13 @@ export default function LoginScreen({ onSignIn, loading = false }: LoginScreenPr
               ) : (
                 <LogIn className="w-5 h-5 mr-2" />
               )}
-              {loading ? '로그인 중...' : 'Google로 로그인'}
+              {loading ? '로그인 중...' : '테스트 계정으로 로그인'}
             </button>
           </div>
           
           <div className="mt-6 text-center">
             <p className="text-sm text-gray-500">
-              로그인하면 StayPost 생성 기능을 사용할 수 있습니다
+              Google 계정으로 로그인하거나 테스트 계정을 사용하여 StayPost 생성 기능을 이용할 수 있습니다
             </p>
           </div>
         </div>

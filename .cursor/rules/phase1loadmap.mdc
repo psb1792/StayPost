@@ -1,0 +1,134 @@
+---
+description: ailoadmap phase 1 개발시
+alwaysApply: false
+---
+### **최종 Phase 1: LangChain & LlamaIndex 기반 AI 시스템 기술 로드맵**
+
+Phase 1은 전체 AI 시스템의 뼈대를 구축하는 핵심 단계입니다. LangChain과 LlamaIndex를 활용하여 확장성과 유지보수성을 갖춘 견고한 기반 인프라를 마련하는 것을 목표로 합니다.
+
+### **1. 데이터/인덱스 계층: 정보 저장 및 검색 시스템 구축**
+
+가게 프로필, 정책, 연관 단어 등 모든 데이터를 AI가 검색, 추천, 생성에 효과적으로 사용할 수 있도록 다목적 인덱스 시스템을 구축합니다. 단일 방식이 아닌, **하이브리드(Hybrid) 접근 방식**을 채택하여 정확성과 의미적 유연성을 모두 확보합니다.
+
+**목표**:
+
+- "비슷한 톤앤매너"와 같은 의미 기반의 유사성 검색을 지원합니다.
+- 금지어, 브랜드명 등 명확한 규칙에 따른 정확한 매칭을 보장합니다.
+- "고요한 감정은 정중한 톤과 어울린다"와 같은 데이터 간의 관계를 질의할 수 있도록 합니다.
+
+**권장 기술 조합 및 역할**:
+
+- **저장소**:
+    - **Supabase (Postgres + pgvector)**: 원천 데이터베이스 및 벡터 데이터 저장소로 활용합니다.
+- **인덱싱 도구 (LlamaIndex)**:
+    - **`VectorStoreIndex`**: 문장과 용어를 임베딩하여 벡터로 저장합니다. 이를 통해 "MZ세대에게 인기 있을 만한 힙한 단어"와 같이 의미적으로 유사한 콘텐츠를 검색하는 RAG(검색 증강 생성) 시스템의 기반을 마련합니다.
+    - **`KeywordTableIndex`**: 금지어, 필수어, 브랜드명, 지역명 등 **정확한 키워드 매칭**이 필요할 때 빠른 조회를 위해 사용합니다.
+    - **`KnowledgeGraphIndex`**: 감정, 톤, 타겟 고객 간의 **관계**를 그래프 형태로 저장합니다. "'고요함'에 어울리는 표현과 피해야 할 표현은?"과 같은 관계성 질문에 효과적으로 답변할 수 있습니다.
+
+**구현 예시 코드**:
+
+Python
+
+`# LlamaIndex와 Supabase를 사용한 벡터 인덱싱
+from supabase import create_client
+from llama_index.core import Document, VectorStoreIndex, StorageContext, Settings
+from llama_index.embeddings.openai import OpenAIEmbedding
+from llama_index.vector_stores.supabase import SupabaseVectorStore
+
+# 1) Supabase 연결 및 임베딩 모델 설정
+supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
+Settings.embed_model = OpenAIEmbedding(model="text-embedding-3-large")
+
+# 2) 벡터 스토어 초기화
+vector_store = SupabaseVectorStore(
+    client=supabase,
+    table_name="ai_kb_vectors",
+    query_name="match_vectors"
+)
+storage_ctx = StorageContext.from_defaults(vector_store=vector_store)
+
+# 3) 가게 프로필, 정책 등을 문서화하여 인덱싱
+docs = [
+    Document(
+      text="홍실장펜션: 잔잔/고요 톤. 40~50대 가족 타깃. 자연/새소리/여유 키워드 선호.",
+      metadata={"store_slug":"hong", "type":"profile", "tone":"calm"}
+    ),
+    Document(
+      text="금지어: 과도한 과장, 클릭베이트 어휘, 속도감 강조 문구.",
+      metadata={"store_slug":"hong", "type":"policy", "tag":"forbidden"}
+    ),
+]
+vec_index = VectorStoreIndex.from_documents(docs, storage_context=storage_ctx)`
+
+### **2. 오케스트레이션 계층: AI 호출 통합 시스템**
+
+모든 LLM 호출(프롬프트 구성 → 모델 실행 → 결과 파싱 → 검증 및 재시도 → 로깅)을 표준화된 파이프라인으로 통합합니다. LangChain Expression Language (LCEL)를 사용하여 코드 가독성과 재사용성을 극대화하고, 안정적인 응답 처리를 보장합니다.
+
+**목표**:
+
+- LLM 호출의 전 과정을 짧고 견고한 코드로 구현합니다.
+- LLM의 응답이 정해진 JSON 구조를 따르도록 강제하고, 스키마 위반을 초기에 차단합니다.
+- 네트워크 오류나 불완전한 JSON 응답 발생 시 자동으로 재시도하거나 복구하여 시스템 안정성을 높입니다.
+
+**권장 기술 조합 및 역할**:
+
+- **`LangChain LCEL`**: `|` (파이프) 연산자를 사용해 프롬프트, 모델, 파서를 연결하는 표준 파이프라인을 구축합니다. 비동기, 스트리밍, 병렬 처리를 손쉽게 확장할 수 있습니다.
+- **`Pydantic` 모델**: 원하는 응답의 데이터 구조를 클래스로 명확하게 정의합니다.
+- **`with_structured_output`**: LLM의 출력을 Pydantic 모델로 직접 파싱하여 구조를 보장합니다.
+- **`with_retry`**: 네트워크 오류 등 일시적인 문제 발생 시 자동으로 재시도를 실행합니다.
+- **`OutputFixingParser`**: LLM이 불완전하거나 깨진 JSON을 반환했을 때, 다른 LLM을 호출하여 스스로 복구하도록 합니다.
+
+**구현 예시 코드**:
+
+Python
+
+`# LCEL과 Pydantic을 사용한 안정적인 AI 호출 체인
+from pydantic import BaseModel, Field
+from langchain_openai import ChatOpenAI
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.runnables import Runnable
+
+# 1) Pydantic으로 원하는 출력 스키마 정의
+class Suitability(BaseModel):
+    suitable: bool
+    score: float = Field(description="이미지 적합성 점수 (0.0-1.0)", ge=0, le=1)
+    reasons: list[str] = Field(description="점수 산정 이유 목록")
+
+# 2) 프롬프트 템플릿 정의
+prompt = ChatPromptTemplate.from_messages([
+    ("system", "역할: 인스타 마케팅 품질 심사관. 반드시 JSON으로만 대답."),
+    ("human", "이미지 설명: {image_desc}\n가게 정보: {store_profile}")
+])
+
+# 3) LLM 래퍼 초기화
+llm = ChatOpenAI(model="gpt-4o-mini", temperature=0.2)
+
+# 4) LCEL로 체인 구성 (프롬프트 → 모델+스키마 파싱 → 재시도)
+# 이 체인이 'AI 호출 공통 함수'의 역할을 합니다.
+chain: Runnable = prompt | llm.with_structured_output(Suitability)
+robust_chain = chain.with_retry()
+
+# 5) 체인 실행
+result: Suitability = robust_chain.invoke({
+    "image_desc": "노을 지는 숲속 전경, 잔잔한 분위기",
+    "store_profile": "40~50대 가족 타깃, 과장 금지, 고요/잔잔 톤"
+})
+
+print(f"적합성 점수: {result.score}")
+print(f"이유: {result.reasons}")`
+
+### **3. 구현 및 운영 가이드**
+
+Phase 1의 성공적인 구현과 향후 확장을 위해 다음과 같은 공통 규칙을 권장합니다.
+
+- **모듈화된 디렉터리 구조**: 기능별로 코드를 분리하여 관리합니다.
+    
+    `ai/
+      clients/       # LLM, Embedding 모델 초기화
+      chains/        # LCEL 체인 정의 (e.g., 적합성 판정, 문구 생성)
+      indices/       # LlamaIndex 인덱스 관리
+      retrieval/     # 하이브리드 검색 로직`
+    
+- **메타데이터 표준화**: 인덱싱하는 모든 데이터에 `store_slug`, `axis`(emotion/tone/target), `type`(profile/policy) 등 일관된 메타데이터 키를 사용하여 검색 및 필터링을 용이하게 합니다.
+- **표준 로깅 스키마**: 모든 AI 호출에 대해 `{task, input_hash, model, latency_ms, tokens, parsed_ok, retry_count}`와 같은 최소 필드를 로깅하여 추적성과 디버깅 효율을 높입니다.
+- **캐싱 준비**: Phase 2 이상의 성능 최적화를 위해 `langchain.cache` 또는 결과 해시 기반의 자체 캐시 테이블을 미리 고려합니다.

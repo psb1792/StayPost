@@ -1,3 +1,109 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* 웹 폰트 정의 - FontFace API 사용 */
+@font-face {
+  font-family: 'GmarketSans';
+  src: url('/fonts/woff2/GmarketSansLight.woff2') format('woff2');
+  font-weight: 300;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'GmarketSans';
+  src: url('/fonts/woff2/GmarketSansMedium.woff2') format('woff2');
+  font-weight: 400;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'GmarketSans';
+  src: url('/fonts/woff2/GmarketSansBold.woff2') format('woff2');
+  font-weight: 700;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'GmarketSansTTF';
+  src: url('/fonts/woff2/GmarketSansTTFLight.woff2') format('woff2');
+  font-weight: 300;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'GmarketSansTTF';
+  src: url('/fonts/woff2/GmarketSansTTFMedium.woff2') format('woff2');
+  font-weight: 400;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'GmarketSansTTF';
+  src: url('/fonts/woff2/GmarketSansTTFBold.woff2') format('woff2');
+  font-weight: 700;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Jalnan';
+  src: url('/fonts/woff2/Jalnan2.woff2') format('woff2');
+  font-weight: 400;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'JalnanGothic';
+  src: url('/fonts/woff2/JalnanGothic.woff2') format('woff2');
+  font-weight: 400;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'BookkGothic';
+  src: url('/fonts/woff2/BookkGothic_Light.woff2') format('woff2');
+  font-weight: 300;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'BookkGothic';
+  src: url('/fonts/woff2/BookkGothic_Bold.woff2') format('woff2');
+  font-weight: 700;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'BookkMyungjo';
+  src: url('/fonts/woff2/BookkMyungjo_Light.woff2') format('woff2');
+  font-weight: 300;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'BookkMyungjo';
+  src: url('/fonts/woff2/BookkMyungjo_Bold.woff2') format('woff2');
+  font-weight: 700;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'BagelFatOne';
+  src: url('/fonts/woff2/BagelFatOne-Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Cafe24PROUP';
+  src: url('/fonts/woff2/Cafe24PROUP.woff2') format('woff2');
+  font-weight: 400;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'PartialSansKR';
+  src: url('/fonts/woff2/PartialSansKR-Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-display: swap;
+}
