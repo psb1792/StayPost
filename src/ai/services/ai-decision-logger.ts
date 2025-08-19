@@ -18,6 +18,10 @@ export interface AIDecisionLog {
       total_tokens?: number;
     };
     cost_estimate?: number;
+    model_cost_per_1k_tokens?: {
+      input?: number;
+      output?: number;
+    };
   };
   error_data?: {
     error_type: string;
@@ -39,6 +43,31 @@ export class AIDecisionLogger {
       AIDecisionLogger.instance = new AIDecisionLogger();
     }
     return AIDecisionLogger.instance;
+  }
+
+  // GPT-4o 비용 계산 함수
+  public calculateCost(
+    promptTokens: number,
+    completionTokens: number,
+    model: string = 'gpt-4o'
+  ): number {
+    const costs = {
+      'gpt-4o': {
+        input: 0.0025,  // $0.0025 per 1K tokens
+        output: 0.01    // $0.01 per 1K tokens
+      },
+      'gpt-4o-mini': {
+        input: 0.00015, // $0.00015 per 1K tokens
+        output: 0.0006  // $0.0006 per 1K tokens
+      }
+    };
+
+    const modelCosts = costs[model as keyof typeof costs] || costs['gpt-4o'];
+    
+    const inputCost = (promptTokens / 1000) * modelCosts.input;
+    const outputCost = (completionTokens / 1000) * modelCosts.output;
+    
+    return inputCost + outputCost;
   }
 
   // 새 세션 시작
@@ -81,41 +110,81 @@ export class AIDecisionLogger {
         store_slug: log.store_slug
       });
 
-      const { data, error } = await supabase
-        .from('ai_decision_logs')
-        .insert(log)
-        .select('id')
-        .single();
+      // 인증 상태 확인
+      const { data: authData, error: authError } = await supabase.auth.getSession();
+      console.log('Current auth status:', { 
+        hasSession: !!authData.session, 
+        user: authData.session?.user?.id,
+        error: authError 
+      });
+
+      // RLS 문제를 우회하기 위해 로깅을 선택적으로 수행
+      let data: any = null;
+      let error: any = null;
+      
+      try {
+        // 먼저 테이블 상태 확인
+        const { data: tableInfo, error: tableError } = await supabase
+          .from('ai_decision_logs')
+          .select('id')
+          .limit(1);
+        
+        if (tableError) {
+          console.warn('Table access test failed:', tableError);
+        }
+        
+        const result = await supabase
+          .from('ai_decision_logs')
+          .insert(log)
+          .select('id')
+          .single();
+        
+        data = result.data;
+        error = result.error;
+      } catch (insertError) {
+        console.warn('Failed to insert AI decision log, but continuing:', insertError);
+        error = insertError;
+      }
 
       if (error) {
         console.error('AI Decision Log Error:', {
-          code: error.code,
-          message: error.message,
-          details: error.details,
-          hint: error.hint
+          code: error?.code,
+          message: error?.message,
+          details: error?.details,
+          hint: error?.hint
         });
         
         // RLS 정책 위반인 경우 더 자세한 정보 제공
-        if (error.code === '42501') {
+        if (error?.code === '42501') {
           console.error('RLS Policy Violation - This might be due to authentication issues');
-          const { data: authData, error: authError } = await supabase.auth.getSession();
           console.error('Current auth status:', { data: authData, error: authError });
+          
+          // RLS가 비활성화되어 있어야 하는데 여전히 오류가 발생하는 경우
+          console.warn('RLS should be disabled for ai_decision_logs table. Check migration status.');
         }
         
         // 로깅 실패해도 시스템은 계속 작동하도록 경고만 출력
-        console.warn('AI decision logging failed, but continuing system operation:', error.message);
+        console.warn('AI decision logging failed, but continuing system operation:', error?.message || 'Unknown error');
         
         return {
           success: false,
-          error: error.message
+          error: error?.message || 'Unknown error'
         };
       }
 
-      console.log('AI decision logged successfully:', data.id);
-      return {
-        success: true,
-        log_id: data.id
-      };
+      if (data) {
+        console.log('AI decision logged successfully:', data.id);
+        return {
+          success: true,
+          log_id: data.id
+        };
+      } else {
+        console.warn('AI decision logging failed - no data returned');
+        return {
+          success: false,
+          error: 'No data returned from insert operation'
+        };
+      }
     } catch (error) {
       console.error('AI Decision Logger Error:', error);
       // 로깅 실패해도 시스템은 계속 작동하도록 경고만 출력
@@ -281,6 +350,63 @@ export class AIDecisionLogger {
     }
   }
 
+  // 로그 통계 조회
+  public async getLogStats(
+    storeSlug?: string,
+    days: number = 7
+  ): Promise<{
+    success: boolean;
+    stats?: any;
+    error?: string;
+  }> {
+    try {
+      const startDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
+      
+      let query = supabase
+        .from('ai_decision_logs')
+        .select('*')
+        .gte('created_at', startDate);
+
+      if (storeSlug) {
+        query = query.eq('store_slug', storeSlug);
+      }
+
+      const { data, error } = await query;
+
+      if (error) {
+        return {
+          success: false,
+          error: error.message
+        };
+      }
+
+      // 통계 계산
+      const gpt4oLogs = data?.filter(log => log.metrics?.model === 'gpt-4o') || [];
+      const gpt4oMiniLogs = data?.filter(log => log.metrics?.model === 'gpt-4o-mini') || [];
+      
+      const stats = {
+        total_requests: data?.length || 0,
+        gpt4o_requests: gpt4oLogs.length,
+        gpt4o_mini_requests: gpt4oMiniLogs.length,
+        gpt4o_prompt_tokens: gpt4oLogs.reduce((sum, log) => sum + (log.metrics?.token_usage?.prompt_tokens || 0), 0),
+        gpt4o_completion_tokens: gpt4oLogs.reduce((sum, log) => sum + (log.metrics?.token_usage?.completion_tokens || 0), 0),
+        gpt4o_mini_prompt_tokens: gpt4oMiniLogs.reduce((sum, log) => sum + (log.metrics?.token_usage?.prompt_tokens || 0), 0),
+        gpt4o_mini_completion_tokens: gpt4oMiniLogs.reduce((sum, log) => sum + (log.metrics?.token_usage?.completion_tokens || 0), 0),
+        total_cost: data?.reduce((sum, log) => sum + (log.metrics?.cost_estimate || 0), 0) || 0
+      };
+
+      return {
+        success: true,
+        stats
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      };
+    }
+  }
+
   // 로그 요약 조회
   public async getLogSummary(
     storeSlug?: string,
@@ -379,7 +505,8 @@ export class AIDecisionLogger {
         input_data?: any,
         store_slug?: string,
         retrieval_data?: any,
-        model?: string
+        model?: string,
+        cost?: number
       ) {
         return await logger.logDecisionWithMetrics({
           step,
@@ -389,7 +516,8 @@ export class AIDecisionLogger {
           retrieval_data,
           output_data,
           metrics: {
-            model
+            model,
+            cost_estimate: cost
           }
         }, startTime);
       },

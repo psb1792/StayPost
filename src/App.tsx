@@ -10,6 +10,7 @@ import Step2Demo from './pages/Step2Demo';
 import PerformanceMonitoring from './pages/PerformanceMonitoring';
 import RealAITest from './pages/RealAITest';
 import StyleExtractionDemo from './pages/StyleExtractionDemo';
+import ExtractorDebug from './pages/ExtractorDebug';
 import AuthCallback from './pages/auth/callback';
 
 function App() {
@@ -52,6 +53,7 @@ function App() {
         <Route path="/performance-monitoring" element={<PerformanceMonitoring />} />
         <Route path="/real-ai-test" element={<RealAITest />} />
         <Route path="/style-extraction" element={<StyleExtractionDemo />} />
+        <Route path="/extractor-debug" element={<ExtractorDebug />} />
         <Route path="/:slug" element={<ReservationPage />} />
         <Route path="/:slug/complete" element={<CompletePage />} />
         <Route path="/rls-test" element={<RlsSmokeTest />} />

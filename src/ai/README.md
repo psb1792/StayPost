@@ -587,3 +587,90 @@ await testImageSuitability();
 ## 📄 라이선스
 
 이 프로젝트는 MIT 라이선스 하에 배포됩니다.
+
+# AI 시스템 아키텍처
+
+## 🚀 2단계 AI 파이프라인 시스템
+
+### 개요
+StayPost의 AI 시스템은 **2단계 파이프라인** 구조로 설계되어 있습니다:
+
+1. **AI #1: 기획자 (GPT-4o)** - 사용자 요청을 디자인 명세서로 변환
+2. **AI #2: 개발자 (GPT-o3)** - 디자인 명세서를 Canvas 렌더링 코드로 변환
+
+### 파이프라인 구조
+
+```
+사용자 요청 → GPT-4o (기획자) → 디자인 명세서 → GPT-o3 (개발자) → Canvas 코드 → 이미지 생성
+```
+
+### 각 AI의 역할
+
+#### 🎨 AI #1: 기획자 (GPT-4o)
+- **역할**: 사용자 요청 분석 및 디자인 명세서 생성
+- **입력**: 사용자 요청 + 디자인 데이터베이스
+- **출력**: JSON 형식의 디자인 명세서
+- **특징**: 
+  - 복잡한 추론 및 결정
+  - 디자인 원칙 적용
+  - 사용자 의도 분석
+
+#### 💻 AI #2: 개발자 (GPT-o3)
+- **역할**: 디자인 명세서를 Canvas 렌더링 코드로 변환
+- **입력**: 디자인 명세서 (JSON)
+- **출력**: JavaScript Canvas 코드
+- **특징**:
+  - 정확한 Canvas API 코드 생성
+  - 한글 텍스트 완벽 지원
+  - 성능 최적화
+
+### 사용 예시
+
+```typescript
+import { aiPipelineService } from './ai/services/ai-pipeline-service';
+
+// API 키 설정 (브라우저 환경에서 필요)
+aiPipelineService.setApiKey('your-openai-api-key');
+
+// AI 파이프라인 실행
+const result = await aiPipelineService.generateImage(
+  "여름용 홍보 이미지를 시원한 느낌으로 만들어 줘.",
+  designDatabase,
+  "바다 배경에 유니콘 튜브"
+);
+
+console.log('디자인 명세서:', result.designSpec);
+console.log('Canvas 코드:', result.canvasCode);
+console.log('생성된 이미지:', result.imageUrl);
+```
+
+### API 키 설정
+
+#### 브라우저 환경
+```typescript
+// 데모 페이지에서 직접 입력
+aiPipelineService.setApiKey('sk-your-api-key-here');
+```
+
+#### 서버 환경
+```bash
+# 환경 변수 설정
+export OPENAI_API_KEY=your-openai-api-key-here
+
+# 또는 .env 파일에 추가
+OPENAI_API_KEY=your-openai-api-key-here
+```
+
+### 테스트
+
+```bash
+# 서버 환경에서 테스트
+OPENAI_API_KEY=your-api-key node scripts/test-ai-pipeline.js
+
+# 또는 환경 변수 파일 사용
+node scripts/test-ai-pipeline.js
+```
+
+### 데모 페이지
+
+`/AIPipelineDemo` 페이지에서 실시간으로 AI 파이프라인을 테스트할 수 있습니다.

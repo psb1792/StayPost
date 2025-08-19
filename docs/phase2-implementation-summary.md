@@ -285,3 +285,83 @@ Phase 2 구현 완료 후, 다음 단계에서는 다음 기능들을 고려할 
 ## 결론
 
 Phase 2에서는 StayPost AI 시스템의 핵심 기능들을 성공적으로 구현했습니다. 각 단계별로 최신 AI 기술을 적용하여, 사용자에게 고품질의 인스타그램 콘텐츠 생성 서비스를 제공할 수 있는 기반을 마련했습니다. 특히 하이브리드 검색 시스템과 구조화된 AI 체인을 통해 안정적이고 확장 가능한 아키텍처를 구축했습니다.
+
+## 구현 완료 상태
+
+### ✅ 완료된 기능들
+
+#### 1. 지식 베이스 구축 (Vector Store & Embeddings)
+- **벡터 스토어**: `StoreVectorIndex` 클래스로 메모리 기반 벡터 검색 구현
+- **키워드 인덱스**: `keywordIndex`로 키워드 기반 검색 구현
+- **하이브리드 검색**: 벡터 + 키워드 검색을 결합한 `RouterQueryEngine` 구현
+
+#### 2. 의도 분석 및 검색 (Output Parsers & Self-Query Retriever) ✅ **NEW**
+- **의도 파싱**: `IntentParsingChain`으로 사용자 요청을 구조화된 파라미터로 변환
+- **Self-Query Retriever**: `SelfQueryRetrieverChain`으로 자연어 요청을 메타데이터 필터와 검색 쿼리로 자동 변환
+- **통합 체인**: `IntentRetrievalChain`으로 의도 파싱과 검색을 하나의 파이프라인으로 통합
+
+**구현된 Self-Query Retriever 기능:**
+- 사용자 자연어 요청 → 구조화된 검색 쿼리 자동 변환
+- 메타데이터 필터 자동 생성 (계절, 목적, 스타일, 톤 등)
+- 라우터 쿼리 엔진과 연동하여 최적 검색 전략 선택
+- 검색 결과 필터링 및 스코어링
+
+**지원하는 파라미터:**
+- `season`: 봄, 여름, 가을, 겨울
+- `purpose`: 홍보, 안내, 이벤트, 일반
+- `style`: 시원한, 따뜻한, 경쾌한, 차분한, 우아한, 친근한
+- `tone`: 공식적, 친근한, 유머러스, 감성적, 정보적
+- `hasImage`: true/false
+- `category`: 음식점, 숙박, 카페, 기타
+- `targetAudience`: 전체, 젊은층, 가족, 커플, 비즈니스
+
+#### 3. 최종 결과물 생성 (LCEL)
+- **AI 체인 서비스**: `AIChainService`로 모든 AI 체인 통합 관리
+- **캡션 생성**: `CaptionGenerationChain`으로 최종 콘텐츠 생성
+- **해시태그 생성**: `HashtagGenerationChain`으로 관련 해시태그 생성
+
+### 🔄 현재 구현 상태
+
+```
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│   사용자 요청    │───▶│  의도 파싱      │───▶│  Self-Query     │
+│   (자연어)      │    │  (구조화)       │    │  Retriever      │
+└─────────────────┘    └─────────────────┘    └─────────────────┘
+                                                       │
+                                                       ▼
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│   최종 결과물    │◀───│  캡션 생성      │◀───│  라우터 쿼리    │
+│   (콘텐츠)      │    │  (RAG)          │    │  엔진           │
+└─────────────────┘    └─────────────────┘    └─────────────────┘
+```
+
+### 📁 새로 추가된 파일들
+
+- `src/ai/retrieval/self-query-retriever.ts` - Self-Query Retriever 구현
+- `src/ai/chains/intent-retrieval-chain.ts` - 의도 파싱 + 검색 통합 체인
+- `scripts/test-intent-retrieval.js` - 통합 기능 테스트 스크립트
+
+### 🧪 테스트 방법
+
+```bash
+# 의도 파싱 + Self-Query Retriever 통합 테스트
+npm run test:intent-retrieval
+```
+
+### 🎯 사용 예시
+
+```typescript
+import { intentRetrievalChain } from '@/ai/chains/intent-retrieval-chain';
+
+// 통합 분석 및 검색
+const result = await intentRetrievalChain.analyzeAndRetrieve({
+  userRequest: '우리 동네 팥빙수 축제를 홍보하고 싶어요. 사진 없이 글만 가지고 시원하고 경쾌한 느낌으로 만들어주세요.',
+  context: '음식점 업종, 여름 시즌',
+  availableFilters: ['season', 'purpose', 'style', 'hasImage', 'category']
+});
+
+// 결과:
+// - intent.parameters: { season: '여름', purpose: '홍보', style: '시원한', hasImage: false }
+// - retrieval.query.searchQuery: '시원한 여름 음식점 홍보'
+// - retrieval.results: 관련 디자인 프롬프트 문서들
+```

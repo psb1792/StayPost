@@ -4,9 +4,10 @@ import { AIChainService } from '../services/ai-chain-service';
 describe('Image Suitability Chain', () => {
   let chain: ImageSuitabilityChain;
   let service: AIChainService;
+  const testApiKey = 'test-api-key'; // 테스트용 API 키
 
   beforeAll(() => {
-    chain = new ImageSuitabilityChain();
+    chain = new ImageSuitabilityChain(testApiKey);
     service = AIChainService.getInstance();
   });
 
@@ -125,7 +126,10 @@ describe('Image Suitability Chain', () => {
         useVision: false // 빠른 체크만 수행
       };
 
-      const result = await service.checkImageSuitability(input);
+      const result = await service.checkImageSuitability({
+        ...input,
+        apiKey: testApiKey
+      });
 
       expect(result.success).toBeDefined();
       if (result.success) {
@@ -179,7 +183,10 @@ describe('Image Suitability Chain', () => {
       };
 
       const startTime = Date.now();
-      const result = await service.checkImageSuitability(input);
+      const result = await service.checkImageSuitability({
+        ...input,
+        apiKey: testApiKey
+      });
       const endTime = Date.now();
 
       const duration = endTime - startTime;

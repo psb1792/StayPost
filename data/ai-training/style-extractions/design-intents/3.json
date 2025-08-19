@@ -1,0 +1,74 @@
+{
+    "metadata": {
+      "theme": "여름",
+      "mood": "활기찬",
+      "layout_type": "중앙 집중형 + 비대칭 균형",
+      "color_palette": "밝은 색상 대비 (노랑 텍스트 vs 파랑 배경)",
+      "content_purpose": "이벤트/프로모션",
+      "graphic_style": "일러스트 (해변, 식물) + 버튼 UI",
+      "typography_hierarchy": "큰 타이틀 > 보조 문구 > CTA 버튼",
+      "target_audience": "30-40대 직장인 · 트렌드 지향 소비자"
+    },
+    "embedding_text": "해변과 식물 그래픽을 배경으로, 중앙에 'SUMMER EVENT'를 크게 배치해 시각적 중심을 형성한 여름 시즌오프 이벤트 디자인. 밝은 노란색과 파란색의 강한 대비로 주목도를 높이고, 상단 보조 문구에서 하단 CTA 버튼으로 이어지는 자연스러운 시선 흐름을 유도.",
+    "prompt_template": {
+      "context_and_guidelines": "당신은 소셜 미디어 여름 세일 홍보 이미지를 제작하는 디자이너입니다. 'SUMMER EVENT'를 중심으로 한 활기찬 이벤트 이미지를 만드세요.\n\n## 🎯 핵심 디자인 원칙\n1) 중앙 집중: 큰 타이틀 'SUMMER EVENT'를 화면 중앙에 배치해 첫 시선을 고정\n2) 색상 대비: 노란 텍스트와 파란 배경의 강한 대비로 주목성 확보\n3) 시선 흐름: 상단 보조 문구 → 중앙 메인 타이틀 → 하단 CTA 버튼 순서로 시선 이동 유도\n4) 여백과 구분: 텍스트 주위에 충분한 여백을 두어 배경 그래픽과 분리\n\n## 🔤 타이포그래피\n- 메인 타이틀: 굵고 큰 산세리프, 색상 #FFD700 계열\n- 보조 문구: 중간 크기, 흰색 또는 연한 파랑\n- 버튼 텍스트: 굵은 산세리프, 흰색\n\n## 🎨 컬러 가이드\n- 배경: 파랑 계열 (#004B87 ~ #0066CC)\n- 메인 텍스트: 노랑 (#FFD700)\n- CTA 버튼: 진한 파랑 바탕 + 흰색 텍스트",
+      "layout_structure_json": {
+        "width": 1080,
+        "height": 1080,
+        "elements": [
+          { "type": "background", "color": "#0066CC" },
+  
+          {
+            "id": "subtitle_top",
+            "type": "text",
+            "content": "여름 시즌오프",
+            "font": { "family": "Sans Serif", "size": 32, "weight": 600 },
+            "color": "#FFFFFF",
+            "position": { "x": 540, "y": 120 },
+            "align": "center"
+          },
+  
+          {
+            "id": "main_title",
+            "type": "text",
+            "content": "SUMMER EVENT",
+            "font": { "family": "Sans Serif", "size": 100, "weight": 800 },
+            "color": "#FFD700",
+            "position": { "x": 540, "y": 400 },
+            "align": "center"
+          },
+  
+          {
+            "id": "decor_beach",
+            "type": "illustration",
+            "query": "flat beach with horizon line and palm trees",
+            "position": { "x": 540, "y": 720 },
+            "scale": 1.0,
+            "align": "center"
+          },
+  
+          {
+            "id": "cta_button",
+            "type": "shape",
+            "shape": "rounded_rect",
+            "size": { "w": 420, "h": 90 },
+            "radius": 18,
+            "fill": "#004080",
+            "position": { "x": 540, "y": 920 },
+            "align": "center"
+          },
+          {
+            "id": "cta_text",
+            "type": "text",
+            "content": "쇼핑하러 가기",
+            "font": { "family": "Sans Serif", "size": 34, "weight": 700 },
+            "color": "#FFFFFF",
+            "position": { "x": 540, "y": 920 },
+            "align": "center"
+          }
+        ],
+        "export": { "format": "png", "dpi": 72 }
+      }
+    }
+  }
+  

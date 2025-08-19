@@ -36,21 +36,21 @@ export async function POST(request: Request) {
       );
     }
 
-    // OpenAI API 키 확인
-    const openaiApiKey = import.meta.env.VITE_OPENAI_API_KEY;
-    if (!openaiApiKey || openaiApiKey === 'your-openai-api-key-here') {
-      console.error('OpenAI API key not configured');
-      return new Response(
-        JSON.stringify({ 
-          error: 'AI service not configured. Please set up OpenAI API key.',
-          details: 'Please add your OpenAI API key to the .env file'
-        }),
-        { 
-          status: 500,
-          headers: { 'Content-Type': 'application/json' }
-        }
-      );
-    }
+    // OpenAI API 키 확인 (사용자가 직접 입력하므로 환경변수 불필요)
+    // const openaiApiKey = import.meta.env.VITE_OPENAI_API_KEY;
+    // if (!openaiApiKey || openaiApiKey === 'your-openai-api-key-here') {
+    //   console.error('OpenAI API key not configured');
+    //   return new Response(
+    //     JSON.stringify({ 
+    //       error: 'AI service not configured. Please set up OpenAI API key.',
+    //       details: 'Please add your OpenAI API key to the .env file'
+    //     }),
+    //     { 
+    //       status: 500,
+    //       headers: { 'Content-Type': 'application/json' }
+    //     }
+    //   );
+    // }
 
     // 테스트용 응답 (실제 AI 분석 대신)
     const testResponse = {

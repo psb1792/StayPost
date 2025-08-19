@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { aiChainService } from '@/ai/services/ai-chain-service';
+import { AIChainService } from '@/ai/services/ai-chain-service';
 
 export async function POST(req: NextRequest) {
   try {
@@ -17,6 +17,18 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // API 키는 환경변수에서 가져오거나 요청에서 받아야 함
+    const apiKey = process.env.OPENAI_API_KEY || body.apiKey;
+    if (!apiKey) {
+      return NextResponse.json(
+        { error: 'OpenAI API key is required' },
+        { status: 400 }
+      );
+    }
+
+    // AIChainService 인스턴스 생성
+    const aiChainService = AIChainService.getInstance(apiKey);
+    
     // 사용자 의도 파싱
     const result = await aiChainService.parseIntent({
       userRequest,

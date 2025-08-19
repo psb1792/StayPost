@@ -1,7 +1,7 @@
 import { ChatOpenAI } from '@langchain/openai';
 import { ChatPromptTemplate } from '@langchain/core/prompts';
 import { Runnable } from '@langchain/core/runnables';
-import { llm } from '../clients';
+import { createLLM } from '../clients';
 
 // AI 호출 결과 타입
 export interface AIChainResult<T = any> {
@@ -23,8 +23,11 @@ export abstract class BaseAIChain<TInput = any, TOutput = any> {
   protected chain!: Runnable;
   protected retryCount: number = 3;
 
-  constructor() {
-    this.llm = llm;
+  constructor(apiKey?: string) {
+    if (!apiKey) {
+      throw new Error('API key is required for BaseAIChain');
+    }
+    this.llm = createLLM(apiKey);
     // 하위 클래스에서 initializeChain을 호출하도록 변경
   }
 
@@ -108,7 +111,7 @@ export abstract class BaseAIChain<TInput = any, TOutput = any> {
   }
 
   // 토큰 수 추정 (간단한 추정)
-  private estimateTokens(input: TInput, output: any): number {
+  protected estimateTokens(input: TInput, output: any): number {
     const inputStr = JSON.stringify(input);
     const outputStr = JSON.stringify(output);
     return Math.ceil((inputStr.length + outputStr.length) / 4);

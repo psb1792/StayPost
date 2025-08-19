@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { ChevronLeft, ChevronRight, Check, LogOut, User, Palette } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Check, LogOut, User, Palette, Wrench } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import Step1Upload from './steps/Step1_Upload';
@@ -207,6 +207,13 @@ export default function StepWizard({ className = '' }: StepWizardProps) {
                 >
                   <Palette className="w-4 h-4" />
                   <span>스타일 추출</span>
+                </Link>
+                <Link
+                  to="/extractor-debug"
+                  className="flex items-center space-x-1 px-3 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-100 rounded-md transition-colors"
+                >
+                  <Wrench className="w-4 h-4" />
+                  <span>디버깅</span>
                 </Link>
               </nav>
             </div>

@@ -1,0 +1,37 @@
+{
+  "processing_info": {
+    "timestamp": "2025-08-17T20:05:48.998Z",
+    "processor_version": "1.0.0",
+    "total_processed": 5,
+    "total_errors": 0,
+    "output_files": [
+      "C:\\coding\\StayPost\\data\\processed-training-data\\style-extractions.jsonl",
+      "C:\\coding\\StayPost\\data\\processed-training-data\\image-analyses.jsonl",
+      "C:\\coding\\StayPost\\data\\processed-training-data\\caption-generations.jsonl",
+      "C:\\coding\\StayPost\\data\\processed-training-data\\user-interactions.jsonl",
+      "C:\\coding\\StayPost\\data\\processed-training-data\\integrated-dataset.jsonl",
+      "C:\\coding\\StayPost\\data\\processed-training-data\\canva-ai-dataset.jsonl",
+      "C:\\coding\\StayPost\\data\\processed-training-data\\gpt4o-multimodal-dataset.jsonl"
+    ]
+  },
+  "dataset_info": {
+    "description": "AI Training Data for GPT-4o Multimodal and Canva AI Development",
+    "data_types": [
+      "style_extraction",
+      "image_analysis",
+      "caption_generation",
+      "user_interaction"
+    ],
+    "formats": [
+      "jsonl",
+      "integrated_dataset",
+      "canva_ai_dataset",
+      "gpt4o_multimodal_dataset"
+    ]
+  },
+  "usage_instructions": {
+    "gpt4o_multimodal": "Use for training GPT-4o multimodal models with image-text pairs",
+    "canva_ai": "Use for developing Canva AI features with design context and user preferences",
+    "general": "Use for general AI model training and research"
+  }
+}

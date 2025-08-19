@@ -111,6 +111,44 @@ export class ErrorHandler {
           response_time: 0
         }
       },
+      'image-style-analysis': {
+        success: true,
+        data: {
+          content: '이미지 스타일 분석에 일시적인 문제가 있습니다. 잠시 후 다시 시도해주세요.',
+          analysis: {
+            contextAnalysis: {
+              surroundingElements: '분석 불가',
+              visualFlow: '분석 불가',
+              negativeSpace: '분석 불가',
+              dominantLines: '분석 불가'
+            },
+            intentInference: {
+              placementReason: '분석 불가',
+              balanceStrategy: '분석 불가',
+              visualHierarchy: '분석 불가',
+              messageEnhancement: '분석 불가'
+            },
+            emphasisTechniques: {
+              contrastMethod: '분석 불가',
+              separationTechnique: '분석 불가',
+              attentionGrabber: '분석 불가',
+              readabilityEnhancer: '분석 불가'
+            },
+            designPrinciples: [],
+            executionGuidelines: {
+              positioningRule: '분석 불가',
+              colorSelectionRule: '분석 불가',
+              typographyRule: '분석 불가',
+              spacingRule: '분석 불가'
+            }
+          }
+        },
+        metadata: {
+          model: 'fallback',
+          tokens_used: 0,
+          response_time: 0
+        }
+      },
       'caption-generation': {
         success: true,
         data: {

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { AIDecisionLogViewer } from '../components/AIDecisionLogViewer';
-import { aiChainService } from '../ai/services/ai-chain-service';
+import { AIChainService } from '../ai/services/ai-chain-service';
 import { aiDecisionLogger } from '../ai/services/ai-decision-logger';
 
 export const AIDecisionLogsDemo: React.FC = () => {

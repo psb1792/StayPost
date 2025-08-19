@@ -36,6 +36,11 @@ export interface ContentAnalysisOutput {
 // }
 
 export class ContentAnalysisChain extends BaseAIChain<ContentAnalysisInput, ContentAnalysisOutput> {
+  constructor(apiKey: string) {
+    super(apiKey);
+    this.initializeChain();
+  }
+
   protected initializeChain(): void {
     this.prompt = this.getPromptTemplate();
     this.chain = this.prompt.pipe(this.llm);
