@@ -25,9 +25,9 @@ app.post('/api/caption', upload.any(), async (req, res) => {
     const dataURI =
       `data:${file.mimetype};base64,${file.buffer.toString('base64')}`;
 
-    // 3) GPT-4o-mini Vision 호출
+    // 3) GPT-4o Vision 호출
     const completion = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
+      model: 'gpt-4o',
       response_format: { type: 'json_object' }, // JSON 객체 강제
       messages: [
         {

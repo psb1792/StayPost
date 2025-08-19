@@ -13,6 +13,9 @@ export * from './chains';
 export * from './services/ai-chain-service';
 export * from './services/ai-decision-logger';
 
+// 2단계 AI 파이프라인 시스템
+export * from './services/ai-pipeline-service';
+
 // AI 시스템 초기화 함수
 export async function initializeAISystem(): Promise<void> {
   const { AIInitializer } = await import('./utils/initializer');
@@ -159,9 +162,9 @@ export async function runTests(): Promise<void> {
 }
 
 // 개별 테스트 함수들
-export async function testImageSuitability(): Promise<void> {
+export async function testImageSuitability(apiKey: string): Promise<void> {
   const { ImageSuitabilityChain } = await import('./chains/image-suitability');
-  const chain = new ImageSuitabilityChain();
+  const chain = new ImageSuitabilityChain(apiKey);
   
   console.log('Testing Image Suitability Chain...');
   

@@ -1,4 +1,4 @@
-import { aiChainService } from '../services/ai-chain-service';
+import { AIChainService } from '../services/ai-chain-service';
 import { AIChainResult } from '../chains/base-chain';
 
 // 테스트용 가게 프로필

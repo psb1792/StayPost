@@ -13,6 +13,16 @@ export interface IntentParsingOutput {
   intent: string;
   entities: string[];
   confidence: number;
+  // 구조화된 파라미터 추가
+  parameters: {
+    season?: '봄' | '여름' | '가을' | '겨울';
+    purpose?: '홍보' | '안내' | '이벤트' | '일반';
+    style?: '시원한' | '따뜻한' | '경쾌한' | '차분한' | '우아한' | '친근한';
+    tone?: '공식적' | '친근한' | '유머러스' | '감성적' | '정보적';
+    hasImage?: boolean;
+    category?: '음식점' | '숙박' | '카페' | '기타';
+    targetAudience?: '전체' | '젊은층' | '가족' | '커플' | '비즈니스';
+  };
 }
 
 // Pydantic 모델 (임시 주석 처리)
@@ -28,6 +38,11 @@ export interface IntentParsingOutput {
 // }
 
 export class IntentParsingChain extends BaseAIChain<IntentParsingInput, IntentParsingOutput> {
+  constructor(apiKey: string) {
+    super(apiKey);
+    this.initializeChain();
+  }
+
   protected initializeChain(): void {
     this.prompt = this.getPromptTemplate();
     this.chain = this.prompt.pipe(this.llm);
@@ -48,13 +63,32 @@ export class IntentParsingChain extends BaseAIChain<IntentParsingInput, IntentPa
       다음 항목을 분석해주세요:
       1. 사용자의 주요 의도
       2. 언급된 엔티티들
+      3. 구조화된 파라미터들
       
       JSON 형태로 응답해주세요:
       {{
         "intent": "의도",
         "entities": ["엔티티1", "엔티티2"],
-        "confidence": 0.95
+        "confidence": 0.95,
+        "parameters": {{
+          "season": "여름",
+          "purpose": "홍보",
+          "style": "시원한",
+          "tone": "친근한",
+          "hasImage": true,
+          "category": "음식점",
+          "targetAudience": "전체"
+        }}
       }}
+      
+      파라미터 가이드:
+      - season: "봄", "여름", "가을", "겨울" 중 선택
+      - purpose: "홍보", "안내", "이벤트", "일반" 중 선택
+      - style: "시원한", "따뜻한", "경쾌한", "차분한", "우아한", "친근한" 중 선택
+      - tone: "공식적", "친근한", "유머러스", "감성적", "정보적" 중 선택
+      - hasImage: true/false
+      - category: "음식점", "숙박", "카페", "기타" 중 선택
+      - targetAudience: "전체", "젊은층", "가족", "커플", "비즈니스" 중 선택
     `);
   }
 
@@ -69,14 +103,16 @@ export class IntentParsingChain extends BaseAIChain<IntentParsingInput, IntentPa
       return {
         intent: parsed.intent || '',
         entities: parsed.entities || [],
-        confidence: parsed.confidence || 0.5
+        confidence: parsed.confidence || 0.5,
+        parameters: parsed.parameters || {}
       };
     } catch (error) {
       console.error('Error parsing intent parsing result:', error);
       return {
         intent: '',
         entities: [],
-        confidence: 0
+        confidence: 0,
+        parameters: {}
       };
     }
   }

@@ -17,6 +17,11 @@ export interface StyleSuggestionOutput {
 }
 
 export class StyleSuggestionChain extends BaseAIChain<StyleSuggestionInput, StyleSuggestionOutput> {
+  constructor(apiKey: string) {
+    super(apiKey);
+    this.initializeChain();
+  }
+
   protected initializeChain(): void {
     this.prompt = this.getPromptTemplate();
     this.chain = this.prompt.pipe(this.llm);

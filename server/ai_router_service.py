@@ -23,7 +23,6 @@ from llama_index.core.storage.storage_context import StorageContext
 from llama_index.vector_stores.chroma import ChromaVectorStore
 from llama_index.embeddings.openai import OpenAIEmbedding
 from llama_index.llms.openai import OpenAI
-from llama_index.graph_stores.neodb import Neo4jGraphStore
 import chromadb
 import networkx as nx
 

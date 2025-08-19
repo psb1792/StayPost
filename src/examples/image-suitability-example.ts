@@ -8,10 +8,10 @@ import { AIChainService } from '../ai/services/ai-chain-service';
  */
 
 // 예제 1: 기본적인 이미지 적합성 판단
-async function basicImageSuitabilityCheck() {
+async function basicImageSuitabilityCheck(apiKey: string) {
   console.log('=== 기본 이미지 적합성 판단 ===');
   
-  const chain = new ImageSuitabilityChain();
+  const chain = new ImageSuitabilityChain(apiKey);
   
   const input = {
     imageUrl: 'https://example.com/pension-room.jpg',
@@ -50,10 +50,10 @@ async function basicImageSuitabilityCheck() {
 }
 
 // 예제 2: 빠른 체크 (Vision 모델 없이)
-async function quickImageCheck() {
+async function quickImageCheck(apiKey: string) {
   console.log('\n=== 빠른 이미지 체크 ===');
   
-  const chain = new ImageSuitabilityChain();
+  const chain = new ImageSuitabilityChain(apiKey);
   
   const input = {
     imageUrl: 'https://example.com/pension-exterior.jpg',
@@ -83,10 +83,10 @@ async function quickImageCheck() {
 }
 
 // 예제 3: AIChainService를 통한 통합 사용
-async function integratedImageCheck() {
+async function integratedImageCheck(apiKey: string) {
   console.log('\n=== 통합 서비스를 통한 이미지 체크 ===');
   
-  const service = AIChainService.getInstance();
+  const service = AIChainService.getInstance(apiKey);
   
   const input = {
     imageUrl: 'https://example.com/pension-garden.jpg',
@@ -127,10 +127,10 @@ async function integratedImageCheck() {
 }
 
 // 예제 4: 배치 처리
-async function batchImageCheck() {
+async function batchImageCheck(apiKey: string) {
   console.log('\n=== 배치 이미지 체크 ===');
   
-  const service = AIChainService.getInstance();
+  const service = AIChainService.getInstance(apiKey);
   
   const tasks = [
     {
@@ -178,10 +178,10 @@ async function batchImageCheck() {
 }
 
 // 예제 5: 다양한 시나리오 테스트
-async function scenarioTests() {
+async function scenarioTests(apiKey: string) {
   console.log('\n=== 다양한 시나리오 테스트 ===');
   
-  const chain = new ImageSuitabilityChain();
+  const chain = new ImageSuitabilityChain(apiKey);
   
   const scenarios = [
     {
@@ -247,15 +247,15 @@ async function scenarioTests() {
 }
 
 // 메인 실행 함수
-export async function runImageSuitabilityExamples() {
+export async function runImageSuitabilityExamples(apiKey: string) {
   console.log('🚀 이미지 적합성 판단 예제 실행 시작\n');
   
   try {
-    await basicImageSuitabilityCheck();
-    await quickImageCheck();
-    await integratedImageCheck();
-    await batchImageCheck();
-    await scenarioTests();
+    await basicImageSuitabilityCheck(apiKey);
+    await quickImageCheck(apiKey);
+    await integratedImageCheck(apiKey);
+    await batchImageCheck(apiKey);
+    await scenarioTests(apiKey);
     
     console.log('\n✅ 모든 예제 실행 완료!');
   } catch (error) {
@@ -265,5 +265,6 @@ export async function runImageSuitabilityExamples() {
 
 // 직접 실행 시
 if (import.meta.env.DEV) {
-  runImageSuitabilityExamples();
+  // API 키가 필요하므로 직접 실행하지 않음
+  console.log('API 키가 필요합니다. runImageSuitabilityExamples(apiKey)를 호출하세요.');
 }

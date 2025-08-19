@@ -11,6 +11,7 @@ from datetime import datetime
 
 from fastapi import FastAPI, HTTPException, BackgroundTasks, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 import uvicorn
 import base64
@@ -55,6 +56,16 @@ class HealthResponseModel(BaseModel):
     status: str = Field(..., description="서비스 상태")
     timestamp: str = Field(..., description="현재 시간")
     version: str = Field(..., description="서비스 버전")
+
+class FileSaveRequestModel(BaseModel):
+    filename: str = Field(..., description="파일명")
+    content: str = Field(..., description="파일 내용")
+    file_type: str = Field(..., description="파일 타입 (json, markdown, etc.)")
+
+class FileSaveResponseModel(BaseModel):
+    success: bool = Field(..., description="저장 성공 여부")
+    file_path: str = Field(..., description="저장된 파일 경로")
+    message: str = Field(..., description="응답 메시지")
 
 # 로깅을 위한 함수
 def log_recommendation_request(request_data: Dict[str, Any], response_data: Dict[str, Any], processing_time: float):
@@ -289,6 +300,47 @@ async def check_image_suitability(image: UploadFile = File(...)):
         raise HTTPException(
             status_code=500,
             detail=f"Internal server error: {str(error)}"
+        )
+
+@app.post("/save-file", response_model=FileSaveResponseModel)
+async def save_file_to_project(request: FileSaveRequestModel):
+    """
+    파일을 StayPost 프로젝트 폴더에 저장하는 API
+    
+    클라이언트에서 전송한 파일을 서버의 지정된 폴더에 저장합니다.
+    """
+    try:
+        # 저장할 폴더 경로 설정
+        base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # StayPost 프로젝트 루트
+        save_dir = os.path.join(base_dir, "data", "ai-training", "style-extractions")
+        
+        # 폴더가 없으면 생성
+        os.makedirs(save_dir, exist_ok=True)
+        
+        # 파일명에 타임스탬프 추가
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        safe_filename = f"{timestamp}_{request.filename}"
+        
+        # 파일 경로 생성
+        file_path = os.path.join(save_dir, safe_filename)
+        
+        # 파일 저장
+        with open(file_path, 'w', encoding='utf-8') as f:
+            f.write(request.content)
+        
+        print(f"File saved successfully: {file_path}")
+        
+        return FileSaveResponseModel(
+            success=True,
+            file_path=file_path,
+            message=f"파일이 성공적으로 저장되었습니다: {safe_filename}"
+        )
+        
+    except Exception as error:
+        print(f"File save error: {error}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"파일 저장 중 오류가 발생했습니다: {str(error)}"
         )
 
 if __name__ == "__main__":

@@ -1,0 +1,44 @@
+{
+  "timestamp": "2025-08-17T18:39:22.266Z",
+  "analysis": {
+    "contextAnalysis": {
+      "surroundingElements": "이미지 하단의 바다와 해변 요소가 여름 분위기를 조성하며, 상단의 구름과 갈매기가 시각적 균형을 잡아준다.",
+      "visualFlow": "텍스트가 중앙에 배치되어 시선을 끌며, 하단의 해변 이미지가 자연스럽게 시선을 아래로 유도한다.",
+      "negativeSpace": "텍스트 주변의 여백이 충분하여 가독성을 높이고, 주요 메시지를 강조한다.",
+      "dominantLines": "텍스트의 수평 정렬과 하단의 수평선이 안정감을 준다."
+    },
+    "intentInference": {
+      "placementReason": "중앙에 큰 텍스트를 배치하여 메시지를 명확하게 전달하고, 하단의 이미지로 여름 분위기를 강조한다.",
+      "balanceStrategy": "상단과 하단의 요소들이 시각적 균형을 이루며, 텍스트와 이미지의 조화가 잘 이루어져 있다.",
+      "visualHierarchy": "큰 제목이 가장 먼저 눈에 띄고, 그 다음으로 참여 방법과 기간이 강조된다.",
+      "messageEnhancement": "여름과 관련된 시각적 요소들이 메시지를 강화하며, 텍스트와 이미지의 조화가 메시지를 명확히 전달한다."
+    },
+    "emphasisTechniques": {
+      "contrastMethod": "배경색과 텍스트 색상의 대비를 통해 가독성을 높였다.",
+      "separationTechnique": "텍스트와 이미지 사이의 여백을 통해 요소들을 분리하고 명확하게 구분한다.",
+      "attentionGrabber": "큰 글씨와 대조적인 색상 사용으로 주의를 끈다.",
+      "readabilityEnhancer": "명확한 폰트와 충분한 여백을 사용하여 가독성을 높였다."
+    },
+    "designPrinciples": [
+      "대비",
+      "균형",
+      "계층 구조",
+      "조화"
+    ],
+    "executionGuidelines": {
+      "positioningRule": "중앙 정렬을 통해 주요 메시지를 강조한다.",
+      "colorSelectionRule": "여름을 연상시키는 파란색 계열을 사용하여 시각적 일관성을 유지한다.",
+      "typographyRule": "굵은 폰트를 사용하여 주요 메시지를 강조하고, 작은 글씨로 세부 정보를 제공한다.",
+      "spacingRule": "텍스트와 이미지 사이에 충분한 간격을 두어 가독성을 높인다."
+    }
+  },
+  "metadata": {
+    "originalFile": "2025-08-17_18-39-22_style-extraction.json",
+    "processedAt": "2025-08-17T19:54:43.815Z",
+    "imageCount": 1,
+    "imageTypes": [
+      "image/png"
+    ],
+    "estimatedTotalSize": 142
+  }
+}

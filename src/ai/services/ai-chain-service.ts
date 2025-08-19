@@ -20,15 +20,20 @@ export class AIChainService {
   private chains: Map<ChainType, any> = new Map();
   private cacheService: CacheService;
   private errorHandler: ErrorHandler;
+  private apiKey: string;
 
-  private constructor() {
+  private constructor(apiKey: string) {
+    this.apiKey = apiKey;
     this.cacheService = CacheService.getInstance();
     this.errorHandler = ErrorHandler.getInstance();
   }
 
-  public static getInstance(): AIChainService {
+  public static getInstance(apiKey?: string): AIChainService {
     if (!AIChainService.instance) {
-      AIChainService.instance = new AIChainService();
+      if (!apiKey) {
+        throw new Error('API key is required for AIChainService');
+      }
+      AIChainService.instance = new AIChainService(apiKey);
     }
     return AIChainService.instance;
   }
@@ -38,7 +43,7 @@ export class AIChainService {
     try {
       if (!this.chains.has(type)) {
         console.log(`Initializing chain: ${type}`);
-        const chain = await createChain(type);
+        const chain = await createChain(type, this.apiKey);
         
         // 체인이 제대로 생성되었는지 확인
         if (!chain) {
@@ -101,15 +106,24 @@ export class AIChainService {
       // 캐시에 저장
       this.cacheService.set(cacheKey, result, 10 * 60 * 1000); // 10분 캐시
       
-      // 로깅 시도하되 실패해도 계속 진행
+      // 비용 계산 및 로깅
       try {
+        const cost = aiDecisionLogger.calculateCost(
+          result.metadata?.tokens || 0,
+          result.metadata?.tokens || 0,
+          'gpt-4o'
+        );
+        
         await monitor.logSuccess(
           result,
           input,
           input.storeProfile?.store_slug,
           undefined,
-          'gpt-4o'
+          'gpt-4o',
+          cost
         );
+        
+        console.log(`Content analysis completed - Cost: $${cost.toFixed(4)}`);
       } catch (loggingError) {
         console.warn('Failed to log content analysis success, but continuing:', loggingError);
       }
@@ -152,15 +166,24 @@ export class AIChainService {
       const chain = await this.getChain('caption-generation');
       const result = await chain.generateCaption(input);
       
-      // 로깅 시도하되 실패해도 계속 진행
+      // 비용 계산 및 로깅
       try {
+        const cost = aiDecisionLogger.calculateCost(
+          result.metadata?.tokens || 0,
+          result.metadata?.tokens || 0,
+          'gpt-4o'
+        );
+        
         await monitor.logSuccess(
           result,
           input,
           input.storeProfile?.store_slug,
           undefined,
-          'gpt-4o'
+          'gpt-4o',
+          cost
         );
+        
+        console.log(`Caption generation completed - Cost: $${cost.toFixed(4)}`);
       } catch (loggingError) {
         console.warn('Failed to log caption generation success, but continuing:', loggingError);
       }
@@ -331,11 +354,20 @@ export class AIChainService {
       specialEvent?: string;
     };
     useVision?: boolean;
+    apiKey?: string; // API 키 추가
   }): Promise<AIChainResult> {
     const monitor = aiDecisionLogger.createPerformanceMonitor('2.1', 'image-suitability');
     
     try {
-      const chain = await this.getChain('image-suitability') as ImageSuitabilityChain;
+      // API 키가 없으면 에러
+      if (!input.apiKey) {
+        throw new Error('API key is required for image suitability check');
+      }
+      
+      // ImageSuitabilityChain을 직접 생성
+      const { ImageSuitabilityChain } = await import('../chains/image-suitability');
+      const chain = new ImageSuitabilityChain(input.apiKey);
+      
       let result: AIChainResult;
       
       if (input.useVision !== false) {
@@ -453,6 +485,8 @@ export class AIChainService {
     imageUrl: string;
     prompt: string;
     storeProfile: any;
+    apiKey?: string; // API 키 추가
+    customPrompt?: string; // 커스텀 프롬프트 추가
   }): Promise<AIChainResult> {
     const cacheKey = {
       type: 'image-style-analysis',
@@ -473,24 +507,26 @@ export class AIChainService {
     try {
       const result = await this.errorHandler.withRetry(
         async () => {
-          console.log('Getting image-suitability chain...');
-          const chain = await this.getChain('image-suitability');
-          
-          // 체인이 제대로 초기화되었는지 확인
-          if (!chain) {
-            throw new Error('Image suitability chain not initialized');
+          // API 키가 없으면 에러
+          if (!input.apiKey) {
+            throw new Error('API key is required for image style analysis');
           }
           
-          console.log('Chain obtained, checking invokeWithVision method...');
+          console.log('Creating ImageSuitabilityChain with API key...');
+          const { ImageSuitabilityChain } = await import('../chains/image-suitability');
+          const chain = new ImageSuitabilityChain(input.apiKey);
           
-          // invokeWithVision 메서드가 있는지 확인
-          if (typeof (chain as any).invokeWithVision !== 'function') {
-            console.error('Chain methods:', Object.getOwnPropertyNames(Object.getPrototypeOf(chain)));
-            throw new Error('invokeWithVision method not available on image suitability chain');
-          }
+          console.log('Chain created, calling invokeWithVision...');
+          console.log('Input imageUrl length:', input.imageUrl.length);
+          console.log('Store meta:', {
+            name: input.storeProfile.name || 'Unknown Store',
+            category: input.storeProfile.category || 'General',
+            description: input.storeProfile.description,
+            targetAudience: input.storeProfile.target_audience,
+            brandTone: input.storeProfile.brand_tone
+          });
           
-          console.log('Calling invokeWithVision...');
-          return await (chain as any).invokeWithVision({
+          const visionResult = await chain.invokeWithVision({
             imageUrl: input.imageUrl,
             storeMeta: {
               name: input.storeProfile.name || 'Unknown Store',
@@ -498,8 +534,12 @@ export class AIChainService {
               description: input.storeProfile.description,
               targetAudience: input.storeProfile.target_audience,
               brandTone: input.storeProfile.brand_tone
-            }
+            },
+            customPrompt: input.customPrompt // 커스텀 프롬프트 전달
           });
+          
+          console.log('Vision result:', visionResult);
+          return visionResult;
         },
         {
           operation: 'image-style-analysis',
@@ -511,15 +551,24 @@ export class AIChainService {
       // 캐시에 저장
       this.cacheService.set(cacheKey, result, 10 * 60 * 1000); // 10분 캐시
       
-      // 로깅 시도하되 실패해도 계속 진행
+      // 비용 계산 및 로깅
       try {
+        const cost = aiDecisionLogger.calculateCost(
+          result.metadata?.tokens || 0,
+          result.metadata?.tokens || 0,
+          'gpt-4o'
+        );
+        
         await monitor.logSuccess(
           result,
           input,
           input.storeProfile?.store_slug,
           undefined,
-          'gpt-4o'
+          'gpt-4o',
+          cost
         );
+        
+        console.log(`Image style analysis completed - Cost: $${cost.toFixed(4)}`);
       } catch (loggingError) {
         console.warn('Failed to log image style analysis success, but continuing:', loggingError);
       }
@@ -658,5 +707,5 @@ export class AIChainService {
   }
 }
 
-// 싱글톤 인스턴스 export
-export const aiChainService = AIChainService.getInstance();
+// 싱글톤 인스턴스는 API 키가 필요하므로 제거
+// 대신 각 사용처에서 API 키와 함께 getInstance()를 호출하세요

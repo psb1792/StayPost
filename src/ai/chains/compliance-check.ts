@@ -36,6 +36,11 @@ export interface ComplianceCheckOutput {
 // }
 
 export class ComplianceCheckChain extends BaseAIChain<ComplianceCheckInput, ComplianceCheckOutput> {
+  constructor(apiKey: string) {
+    super(apiKey);
+    this.initializeChain();
+  }
+
   protected initializeChain(): void {
     this.prompt = this.getPromptTemplate();
     this.chain = this.prompt.pipe(this.llm);

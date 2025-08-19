@@ -4,7 +4,6 @@ import { StringOutputParser } from '@langchain/core/output_parsers';
 import { RunnableSequence } from '@langchain/core/runnables';
 import { BaseAIChain, AIChainResult } from './base-chain';
 import { routerQueryEngine } from '../retrieval/router-query-engine';
-import { llm } from '../clients';
 
 // 해시태그 생성 입력 타입
 export interface HashtagGenerationInput {
@@ -40,6 +39,11 @@ export interface HashtagGenerationOutput {
 
 // 해시태그 생성 체인
 export class HashtagGenerationChain extends BaseAIChain<HashtagGenerationInput, HashtagGenerationOutput> {
+  constructor(apiKey: string) {
+    super(apiKey);
+    this.initializeChain();
+  }
+
   protected initializeChain(): void {
     this.prompt = this.getPromptTemplate();
     this.chain = RunnableSequence.from([
@@ -306,5 +310,6 @@ export class HashtagGenerationChain extends BaseAIChain<HashtagGenerationInput, 
   }
 }
 
-// 싱글톤 인스턴스
-export const hashtagGenerationChain = new HashtagGenerationChain();
+// 싱글톤 인스턴스는 API 키가 필요하므로 제거
+// 대신 factory 함수를 사용하세요
+export const createHashtagGenerationChain = (apiKey: string) => new HashtagGenerationChain(apiKey);

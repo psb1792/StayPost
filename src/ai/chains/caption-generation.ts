@@ -43,9 +43,10 @@ export interface CaptionGenerationOutput {
 export class CaptionGenerationChain extends BaseAIChain<CaptionGenerationInput, CaptionGenerationOutput> {
   private intentParser: IntentParsingChain;
 
-  constructor() {
-    super();
-    this.intentParser = new IntentParsingChain();
+  constructor(apiKey: string) {
+    super(apiKey);
+    this.intentParser = new IntentParsingChain(apiKey);
+    this.initializeChain();
   }
 
   protected initializeChain(): void {

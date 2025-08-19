@@ -1,5 +1,6 @@
 import React from 'react';
 import PerformanceDashboard from '../components/PerformanceDashboard';
+import { CostMonitor } from '../components/CostMonitor';
 
 export default function PerformanceMonitoring() {
   return (
@@ -12,7 +13,10 @@ export default function PerformanceMonitoring() {
           </p>
         </div>
         
-        <PerformanceDashboard />
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          <PerformanceDashboard />
+          <CostMonitor />
+        </div>
       </div>
     </div>
   );

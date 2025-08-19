@@ -20,7 +20,12 @@
     "test:phase4": "node scripts/test-phase4-optimization.js",
     "test:real-ai": "node scripts/test-real-ai-api.js",
     "test:ai-simple": "node scripts/test-ai-simple.js",
-    "test:image-suitability": "node test-image-suitability.js"
+    "test:intent-retrieval": "node scripts/test-intent-retrieval.js",
+    "test:image-suitability": "node test-image-suitability.js",
+    "minify:json": "node scripts/minify-json.js",
+    "compress:images": "node scripts/compress-images.js",
+    "optimize:json": "node scripts/simple-compress.js",
+    "process:ai-data": "node scripts/ai-training-data-processor.js"
   },
   "dependencies": {
     "@langchain/core": "^0.3.71",
