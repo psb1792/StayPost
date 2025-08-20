@@ -24,10 +24,14 @@ export abstract class BaseAIChain<TInput = any, TOutput = any> {
   protected retryCount: number = 3;
 
   constructor(apiKey?: string) {
+    console.log('BaseAIChain constructor called with apiKey:', !!apiKey);
     if (!apiKey) {
+      console.log('No API key provided to BaseAIChain');
       throw new Error('API key is required for BaseAIChain');
     }
+    console.log('Creating LLM with API key...');
     this.llm = createLLM(apiKey);
+    console.log('LLM created successfully');
     // 하위 클래스에서 initializeChain을 호출하도록 변경
   }
 
