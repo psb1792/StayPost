@@ -2,6 +2,9 @@
 
 Flask를 사용하여 구현된 Canvas JS 코드 생성 API입니다. LCEL 파이프라인을 웹 API로 제공합니다.
 
+## 📝 변경사항
+- 2024-01-XX: 새로운 통합 AI 파이프라인 및 canvas generator 시스템 추가
+
 ## 🚀 빠른 시작
 
 ### 1. 서버 실행
