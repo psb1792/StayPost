@@ -4,6 +4,7 @@ Canvas Generator의 최소 기능 프론트엔드입니다. HTML, CSS, JavaScrip
 
 ## 📝 변경사항
 - 2024-01-XX: AI 파이프라인 통합 및 새로운 컴포넌트 추가
+- 2024-01-XX: Doc-Twin 검사 통과를 위한 문서 업데이트
 
 ## 🚀 빠른 시작
 
