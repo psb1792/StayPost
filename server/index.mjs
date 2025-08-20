@@ -3,7 +3,18 @@ import cors from 'cors';
 import multer from 'multer';
 import OpenAI from 'openai';
 import 'dotenv/config';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
+import dotenv from 'dotenv';
+
+// 현재 파일의 디렉토리를 가져와서 루트 디렉토리의 .env 파일을 로드
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+dotenv.config({ path: join(__dirname, '..', '.env') });
 import fetch, { FormData } from 'node-fetch';
+import { PlannerAgent } from '../scripts/planner-agent.js';
+import { DeveloperAgent } from '../scripts/developer-agent.js';
+import { IntegratedAIPipeline } from '../scripts/integrated-ai-pipeline.js';
 
 const app = express();
 app.use(cors());
@@ -359,7 +370,7 @@ app.get('/api/health', (req, res) => {
 });
 
 /* ---------- 서버 시작 ---------- */
-const PORT = process.env.PORT || 5001;
+const PORT = process.env.PORT || 8001;
 app.listen(PORT, () => {
   console.log(`🚀 API on http://localhost:${PORT}`);
 });
@@ -728,5 +739,252 @@ app.post('/api/relight', upload.single('image_file'), async (req, res) => {
     console.error('❌ 리터칭 처리 실패:', err);
     res.status(500).json({ error: 'relight-fail' });
     console.error('❌ 리터칭 처리 실패:', err);
+  }
+});
+
+/* ---------- 기획자 AI 에이전트 엔드포인트 ---------- */
+app.post('/api/planner-agent', async (req, res) => {
+  console.log(`[${new Date().toISOString()}] POST /api/planner-agent 호출됨`);
+  
+  try {
+    const { userRequest, metadata } = req.body;
+
+    if (!userRequest) {
+      return res.status(400).json({ 
+        error: 'Missing userRequest',
+        message: '사용자 요청이 필요합니다.'
+      });
+    }
+
+    if (!metadata) {
+      return res.status(400).json({ 
+        error: 'Missing metadata',
+        message: '메타데이터가 필요합니다.'
+      });
+    }
+
+    console.log('📝 사용자 요청:', userRequest);
+    console.log('📊 메타데이터:', metadata);
+
+    // 기획자 AI 에이전트 인스턴스 생성
+    const plannerAgent = new PlannerAgent();
+    
+    // 에이전트 실행
+    const result = await plannerAgent.processUserRequest(userRequest, metadata);
+
+    if (result.success) {
+      console.log('✅ 기획자 AI 에이전트 실행 성공');
+      res.json({
+        success: true,
+        data: result.data,
+        message: '기획자 AI 에이전트가 성공적으로 실행되었습니다.'
+      });
+    } else {
+      console.error('❌ 기획자 AI 에이전트 실행 실패:', result.error);
+      res.status(500).json({
+        success: false,
+        error: result.error,
+        message: '기획자 AI 에이전트 실행 중 오류가 발생했습니다.'
+      });
+    }
+
+  } catch (error) {
+    console.error('❌ 기획자 AI 에이전트 API 오류:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message,
+      message: '서버 내부 오류가 발생했습니다.'
+    });
+  }
+});
+
+/* ---------- 개발자 AI 에이전트 엔드포인트 ---------- */
+app.post('/api/developer-agent', async (req, res) => {
+  console.log(`[${new Date().toISOString()}] POST /api/developer-agent 호출됨`);
+  
+  try {
+    const { specification } = req.body;
+
+    if (!specification) {
+      return res.status(400).json({ 
+        error: 'Missing specification',
+        message: '명세서가 필요합니다.'
+      });
+    }
+
+    console.log('📋 명세서:', specification.project?.name || 'Unknown Project');
+
+    // 개발자 AI 에이전트 인스턴스 생성
+    const developerAgent = new DeveloperAgent();
+    
+    // 코드 생성 실행
+    const result = await developerAgent.generateCode(specification);
+
+    if (result.success) {
+      console.log('✅ 개발자 AI 에이전트 실행 성공');
+      
+      // 코드 품질 분석 추가
+      const qualityAnalysis = await developerAgent.analyzeCodeQuality(result.data.generatedCode);
+      
+      res.json({
+        success: true,
+        data: {
+          ...result.data,
+          qualityAnalysis: qualityAnalysis
+        },
+        message: '개발자 AI 에이전트가 성공적으로 코드를 생성했습니다.'
+      });
+    } else {
+      console.error('❌ 개발자 AI 에이전트 실행 실패:', result.error);
+      res.status(500).json({
+        success: false,
+        error: result.error,
+        message: '개발자 AI 에이전트 실행 중 오류가 발생했습니다.'
+      });
+    }
+
+  } catch (error) {
+    console.error('❌ 개발자 AI 에이전트 API 오류:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message,
+      message: '서버 내부 오류가 발생했습니다.'
+    });
+  }
+});
+
+/* ---------- 통합 AI 파이프라인 엔드포인트 ---------- */
+app.post('/api/integrated-pipeline', async (req, res) => {
+  console.log(`[${new Date().toISOString()}] POST /api/integrated-pipeline 호출됨`);
+  
+  try {
+    const { userRequest, metadata } = req.body;
+
+    if (!userRequest) {
+      return res.status(400).json({ 
+        error: 'Missing userRequest',
+        message: '사용자 요청이 필요합니다.'
+      });
+    }
+
+    if (!metadata) {
+      return res.status(400).json({ 
+        error: 'Missing metadata',
+        message: '메타데이터가 필요합니다.'
+      });
+    }
+
+    console.log('📝 사용자 요청:', userRequest);
+    console.log('📊 메타데이터:', metadata);
+
+    // 통합 AI 파이프라인 인스턴스 생성
+    const pipeline = new IntegratedAIPipeline();
+    
+    // 파이프라인 실행
+    const result = await pipeline.processUserRequest(userRequest, metadata);
+
+    if (result.success) {
+      console.log('✅ 통합 AI 파이프라인 실행 성공');
+      res.json({
+        success: true,
+        data: result.data,
+        message: '통합 AI 파이프라인이 성공적으로 실행되었습니다.'
+      });
+    } else {
+      console.error('❌ 통합 AI 파이프라인 실행 실패:', result.error);
+      res.status(500).json({
+        success: false,
+        error: result.error,
+        message: '통합 AI 파이프라인 실행 중 오류가 발생했습니다.'
+      });
+    }
+
+  } catch (error) {
+    console.error('❌ 통합 AI 파이프라인 API 오류:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message,
+      message: '서버 내부 오류가 발생했습니다.'
+    });
+  }
+});
+
+/* ---------- 사용자 의도 분석 엔드포인트 ---------- */
+app.post('/api/user-intent-analysis', async (req, res) => {
+  console.log(`[${new Date().toISOString()}] POST /api/user-intent-analysis 호출됨`);
+  
+  try {
+    const { userRequest, context } = req.body;
+
+    if (!userRequest) {
+      return res.status(400).json({ 
+        error: 'Missing userRequest',
+        message: '사용자 요청이 필요합니다.'
+      });
+    }
+
+    console.log('📝 사용자 요청:', userRequest);
+    console.log('📊 컨텍스트:', context);
+
+    // OpenAI API 키 확인
+    const apiKey = process.env.OPENAI_API_KEY;
+    if (!apiKey) {
+      return res.status(500).json({
+        error: 'OpenAI API key not configured',
+        message: 'OpenAI API 키가 설정되지 않았습니다.'
+      });
+    }
+
+    // GPT-4o를 사용한 사용자 의도 분석
+    const completion = await openai.chat.completions.create({
+      model: 'gpt-4o',
+      response_format: { type: 'json_object' },
+      messages: [
+        {
+          role: 'system',
+          content: `당신은 사용자의 요청을 분석하여 의도와 요구사항을 파악하는 전문가입니다.
+          
+다음 JSON 형식으로 응답해주세요:
+{
+  "coreObjective": "핵심 목표",
+  "primaryFunction": "주요 기능",
+  "keyData": ["중요한 데이터 요소들"],
+  "visualElements": ["필요한 시각적 요소들"],
+  "technicalRequirements": ["기술적 요구사항들"],
+  "contentRequirements": ["콘텐츠 요구사항들"],
+  "constraints": ["제약사항들"],
+  "priority": "high|medium|low",
+  "estimatedEffort": "high|medium|low",
+  "confidence": 0.0-1.0
+}`
+        },
+        {
+          role: 'user',
+          content: `사용자 요청: ${userRequest}
+${context ? `컨텍스트: ${context}` : ''}
+
+위 요청을 분석하여 의도와 요구사항을 파악해주세요.`
+        }
+      ],
+      temperature: 0.3,
+      max_tokens: 1000
+    });
+
+    const analysisResult = JSON.parse(completion.choices[0].message.content);
+
+    console.log('✅ 사용자 의도 분석 성공');
+    res.json({
+      success: true,
+      data: analysisResult,
+      message: '사용자 의도 분석이 완료되었습니다.'
+    });
+
+  } catch (error) {
+    console.error('❌ 사용자 의도 분석 API 오류:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message,
+      message: '사용자 의도 분석 중 오류가 발생했습니다.'
+    });
   }
 });
