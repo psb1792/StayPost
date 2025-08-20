@@ -1,34 +1,24 @@
 // AI 호출 통합 시스템 메인 진입점
 export * from './base-chain';
-export * from './content-analysis';
-export * from './caption-generation';
 export * from './style-suggestion';
 export * from './compliance-check';
 export * from './image-suitability';
 export * from './intent-parsing';
 export * from './intent-retrieval-chain';
-export * from './hashtag-generation';
+export * from './user-intent-analysis';
 
 // 체인 타입 정의
 export type ChainType = 
-  | 'content-analysis'
-  | 'caption-generation' 
   | 'style-suggestion'
   | 'compliance-check'
   | 'image-suitability'
   | 'intent-parsing'
   | 'intent-retrieval'
-  | 'hashtag-generation';
+  | 'user-intent-analysis';
 
 // 체인 팩토리 함수
 export async function createChain(type: ChainType, apiKey: string) {
   switch (type) {
-    case 'content-analysis':
-      const { ContentAnalysisChain } = await import('./content-analysis');
-      return new ContentAnalysisChain(apiKey);
-    case 'caption-generation':
-      const { CaptionGenerationChain } = await import('./caption-generation');
-      return new CaptionGenerationChain(apiKey);
     case 'style-suggestion':
       const { StyleSuggestionChain } = await import('./style-suggestion');
       return new StyleSuggestionChain(apiKey);
@@ -45,9 +35,9 @@ export async function createChain(type: ChainType, apiKey: string) {
     case 'intent-retrieval':
       const { IntentRetrievalChain } = await import('./intent-retrieval-chain');
       return new IntentRetrievalChain(apiKey);
-    case 'hashtag-generation':
-      const { HashtagGenerationChain } = await import('./hashtag-generation');
-      return new HashtagGenerationChain(apiKey);
+    case 'user-intent-analysis':
+      const { UserIntentAnalysisChain } = await import('./user-intent-analysis');
+      return new UserIntentAnalysisChain(apiKey);
     default:
       throw new Error(`Unknown chain type: ${type}`);
   }

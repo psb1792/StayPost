@@ -10,6 +10,7 @@ import { ComplianceCheckChain } from '../chains/compliance-check';
 import { ImageSuitabilityChain } from '../chains/image-suitability';
 import { IntentParsingChain } from '../chains/intent-parsing';
 import { HashtagGenerationChain } from '../chains/hashtag-generation';
+import { UserIntentAnalysisChain } from '../chains/user-intent-analysis';
 import { aiDecisionLogger } from './ai-decision-logger';
 import { CacheService } from './cache-service';
 import { ErrorHandler } from './error-handler';
@@ -29,11 +30,18 @@ export class AIChainService {
   }
 
   public static getInstance(apiKey?: string): AIChainService {
+    console.log('AIChainService.getInstance called with apiKey:', !!apiKey);
+    
     if (!AIChainService.instance) {
+      console.log('Creating new AIChainService instance');
       if (!apiKey) {
+        console.log('No API key provided');
         throw new Error('API key is required for AIChainService');
       }
       AIChainService.instance = new AIChainService(apiKey);
+      console.log('AIChainService instance created successfully');
+    } else {
+      console.log('Returning existing AIChainService instance');
     }
     return AIChainService.instance;
   }
@@ -41,27 +49,39 @@ export class AIChainService {
   // 체인 초기화
   private async getChain(type: ChainType) {
     try {
+      console.log(`getChain called for type: ${type}`);
+      console.log(`Current chains in cache:`, Array.from(this.chains.keys()));
+      
       if (!this.chains.has(type)) {
-        console.log(`Initializing chain: ${type}`);
+        console.log(`Chain ${type} not in cache, initializing...`);
+        console.log(`Creating chain with API key:`, !!this.apiKey);
+        
         const chain = await createChain(type, this.apiKey);
         
         // 체인이 제대로 생성되었는지 확인
         if (!chain) {
+          console.error(`createChain returned null/undefined for type: ${type}`);
           throw new Error(`Failed to create chain: ${type}`);
         }
         
+        console.log(`Chain created successfully, type:`, typeof chain);
         this.chains.set(type, chain);
-        console.log(`Chain initialized successfully: ${type}`);
+        console.log(`Chain ${type} added to cache`);
+      } else {
+        console.log(`Chain ${type} found in cache`);
       }
       
       const chain = this.chains.get(type);
       if (!chain) {
+        console.error(`Chain ${type} not found after initialization`);
         throw new Error(`Chain not found after initialization: ${type}`);
       }
       
+      console.log(`Returning chain ${type}:`, typeof chain);
       return chain;
     } catch (error) {
       console.error(`Error getting chain ${type}:`, error);
+      console.error(`Error stack:`, error instanceof Error ? error.stack : 'No stack trace');
       throw error;
     }
   }
@@ -242,6 +262,62 @@ export class AIChainService {
         );
       } catch (loggingError) {
         console.warn('Failed to log intent parsing error, but continuing:', loggingError);
+      }
+      throw error;
+    }
+  }
+
+  // 사용자 의도 분석 및 메타데이터 추출 (Step 1)
+  public async analyzeUserIntent(input: {
+    userRequest: string;
+    context?: {
+      storeProfile?: any;
+      previousInteractions?: any[];
+      userPreferences?: any;
+    };
+  }): Promise<AIChainResult> {
+    const monitor = aiDecisionLogger.createPerformanceMonitor('1.1', 'user-intent-analysis');
+    
+    try {
+      const chain = await this.getChain('user-intent-analysis') as UserIntentAnalysisChain;
+      const result = await chain.analyzeUserIntent({
+        userRequest: input.userRequest,
+        context: input.context
+      });
+      
+      // 비용 계산 및 로깅
+      try {
+        const cost = aiDecisionLogger.calculateCost(
+          result.metadata?.tokens || 0,
+          result.metadata?.tokens || 0,
+          'gpt-4o'
+        );
+        
+        await monitor.logSuccess(
+          result,
+          input,
+          input.context?.storeProfile?.store_slug,
+          undefined,
+          'gpt-4o',
+          cost
+        );
+        
+        console.log(`User intent analysis completed - Cost: $${cost.toFixed(4)}`);
+      } catch (loggingError) {
+        console.warn('Failed to log user intent analysis success, but continuing:', loggingError);
+      }
+      
+      return result;
+    } catch (error) {
+      // 로깅 시도하되 실패해도 계속 진행
+      try {
+        await monitor.logError(
+          error instanceof Error ? error : new Error('Unknown error'),
+          input,
+          input.context?.storeProfile?.store_slug
+        );
+      } catch (loggingError) {
+        console.warn('Failed to log user intent analysis error, but continuing:', loggingError);
       }
       throw error;
     }
@@ -648,6 +724,12 @@ export class AIChainService {
               context: task.input.context
             });
             break;
+          case 'user-intent-analysis':
+            result = await (chain as UserIntentAnalysisChain).analyzeUserIntent({
+              userRequest: task.input.userRequest || task.input.text,
+              context: task.input.context
+            });
+            break;
           case 'hashtag-generation':
             result = await (chain as HashtagGenerationChain).invoke(task.input);
             break;
@@ -684,6 +766,7 @@ export class AIChainService {
       'compliance-check': this.chains.has('compliance-check'),
       'image-suitability': this.chains.has('image-suitability'),
       'intent-parsing': this.chains.has('intent-parsing'),
+      'user-intent-analysis': this.chains.has('user-intent-analysis'),
       'hashtag-generation': this.chains.has('hashtag-generation')
     };
     return status;
@@ -698,6 +781,7 @@ export class AIChainService {
       'compliance-check',
       'image-suitability',
       'intent-parsing',
+      'user-intent-analysis',
       'hashtag-generation'
     ];
 
