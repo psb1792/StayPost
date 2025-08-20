@@ -2,6 +2,9 @@
 
 StayPost를 Netlify에 배포하고 프로덕션 Supabase를 사용하기 위한 설정 방법입니다.
 
+## 📝 변경사항
+- 2024-01-XX: 새로운 Flask API 서버 및 AI 파이프라인 배포 설정 추가
+
 ## 1. 프로덕션 Supabase 프로젝트 생성
 
 ### 1.1 Supabase 프로젝트 생성

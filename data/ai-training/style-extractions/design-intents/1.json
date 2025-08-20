@@ -9,9 +9,9 @@
       "typography_hierarchy": "큰 중앙 타이틀 강조, 부제/가이드 소제목은 작은 폰트",
       "target_audience": "여행자 · 트렌드 지향 소비자"
     },
-    "embedding_text": "하늘색 배경과 구름, 갈매기 그래픽을 활용해 밝고 경쾌한 분위기를 주는 여행 홍보 디자인. 중앙에 큰 텍스트 'MIRI ISLAND'를 배치하여 주목도를 높이고, 상단과 하단의 요소들이 수평적 균형을 이루어 안정감을 주며 여행의 즐거움과 자유로움을 시각적으로 전달.",
+    "embedding_text": "하늘색 배경과 구름, 갈매기 그래픽을 활용해 밝고 경쾌한 분위기를 주는 여행 홍보 디자인. 중앙에 큰 텍스트 '{{MAIN_TITLE}}'를 배치하여 주목도를 높이고, 상단과 하단의 요소들이 수평적 균형을 이루어 안정감을 주며 여행의 즐거움과 자유로움을 시각적으로 전달.",
     "prompt_template": {
-      "context_and_guidelines": "당신은 소셜 미디어 여행 홍보 콘텐츠 디자이너입니다. 'MIRI ISLAND'를 주제로 한 밝고 경쾌한 여행 포스터 이미지를 생성하세요.\n\n## 🎯 핵심 디자인 원칙\n1) 중앙 집중형 레이아웃: 메인 메시지를 중앙에 배치해 시선을 고정\n2) 밝은 색상: 하늘색 배경과 짙은 파랑 텍스트 대비로 가독성 강화\n3) 수평적 균형: 상단의 소제목과 하단의 원형 이미지, 가이드를 수평 배치\n4) 분위기 연출: 구름, 갈매기 같은 자연 요소로 자유롭고 즐거운 감성 표현\n\n## 🔤 타이포그래피\n- 메인 타이틀: 가장 큰 크기, 굵은 폰트, 중앙 배치\n- 부제: 작은 크기, 여백 확보\n\n## 📐 레이아웃 규칙\n- 상단: 소제목(INTENSE DAY TOUR)\n- 중앙: 메인 타이틀(MIRI ISLAND)\n- 하단: 원형 이미지 3개와 'TRAVEL GUIDE' 텍스트",
+      "context_and_guidelines": "당신은 소셜 미디어 여행 홍보 콘텐츠 디자이너입니다. '{{MAIN_TITLE}}'를 주제로 한 밝고 경쾌한 여행 포스터 이미지를 생성하세요.\n\n## 🎯 핵심 디자인 원칙\n1) 중앙 집중형 레이아웃: 메인 메시지를 중앙에 배치해 시선을 고정\n2) 밝은 색상: 하늘색 배경과 짙은 파랑 텍스트 대비로 가독성 강화\n3) 수평적 균형: 상단의 소제목과 하단의 원형 이미지, 가이드를 수평 배치\n4) 분위기 연출: 구름, 갈매기 같은 자연 요소로 자유롭고 즐거운 감성 표현\n\n## 🔤 타이포그래피\n- 메인 타이틀: 가장 큰 크기, 굵은 폰트, 중앙 배치\n- 부제: 작은 크기, 여백 확보\n\n## 📐 레이아웃 규칙\n- 상단: 소제목({{SUBTITLE}})\n- 중앙: 메인 타이틀({{MAIN_TITLE}})\n- 하단: 원형 이미지 3개와 '{{BOTTOM_LABEL}}' 텍스트",
       "layout_structure_json": {
         "width": 1080,
         "height": 1080,
@@ -20,7 +20,7 @@
           {
             "id": "subtitle_top",
             "type": "text",
-            "content": "INTENSE DAY TOUR",
+            "content": "{{SUBTITLE}}",
             "font": { "family": "Sans Serif", "size": 28, "weight": 600 },
             "color": "#003366",
             "position": { "x": 540, "y": 120 },
@@ -29,7 +29,7 @@
           {
             "id": "main_title",
             "type": "text",
-            "content": "MIRI ISLAND",
+            "content": "{{MAIN_TITLE}}",
             "font": { "family": "Sans Serif", "size": 92, "weight": 800 },
             "color": "#002244",
             "position": { "x": 540, "y": 340 },
@@ -63,7 +63,7 @@
           {
             "id": "bottom_label",
             "type": "text",
-            "content": "TRAVEL GUIDE",
+            "content": "{{BOTTOM_LABEL}}",
             "font": { "family": "Sans Serif", "size": 36, "weight": 600 },
             "color": "#003366",
             "position": { "x": 540, "y": 1040 },

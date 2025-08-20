@@ -21,6 +21,10 @@
     "test:real-ai": "node scripts/test-real-ai-api.js",
     "test:ai-simple": "node scripts/test-ai-simple.js",
     "test:intent-retrieval": "node scripts/test-intent-retrieval.js",
+    "test:user-intent-analysis": "node scripts/test-user-intent-analysis.cjs",
+    "test:planner-agent": "node scripts/test-planner-agent.js",
+    "test:developer-agent": "node scripts/test-developer-agent.js",
+    "test:integrated-pipeline": "node scripts/test-integrated-pipeline.js",
     "test:image-suitability": "node test-image-suitability.js",
     "minify:json": "node scripts/minify-json.js",
     "compress:images": "node scripts/compress-images.js",
@@ -28,6 +32,7 @@
     "process:ai-data": "node scripts/ai-training-data-processor.js"
   },
   "dependencies": {
+    "@langchain/community": "^0.3.7",
     "@langchain/core": "^0.3.71",
     "@langchain/openai": "^0.6.7",
     "@supabase/supabase-js": "^2.50.3",

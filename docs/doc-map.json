@@ -1,0 +1,54 @@
+{
+  "allow_skip_labels": ["docs-not-required", "hotfix", "dependencies"],
+  "mappings": [
+    {
+      "globs": ["src/ai/**/*.ts", "src/ai/**/*.js"],
+      "docs": [
+        "docs/ai-api-testing-guide.md",
+        "docs/style-extraction-system-overview.md"
+      ]
+    },
+    {
+      "globs": ["src/components/**/*.tsx", "src/pages/**/*.tsx"],
+      "docs": [
+        "README_frontend.md",
+        "docs/README.md"
+      ]
+    },
+    {
+      "globs": ["app.py", "canvas_generator_pipeline.py", "server/**/*.py"],
+      "docs": [
+        "README_api.md",
+        "docs/flask-api-documentation.md",
+        "docs/lcel-canvas-pipeline.md"
+      ]
+    },
+    {
+      "globs": ["supabase/**/*.sql", "supabase/**/*.ts"],
+      "docs": [
+        "docs/existing-supabase-setup.md",
+        "docs/phase1-infrastructure.md"
+      ]
+    },
+    {
+      "globs": ["scripts/**/*.js", "scripts/**/*.mjs", "scripts/**/*.cjs"],
+      "docs": [
+        "docs/ai-api-testing-guide.md"
+      ]
+    },
+    {
+      "globs": ["package.json", "requirements.txt", "vite.config.ts", "tsconfig*.json"],
+      "docs": [
+        "docs/deployment-setup.md",
+        "docs/environment-management.md"
+      ]
+    },
+    {
+      "globs": ["src/lib/supabase.ts", "src/hooks/useAuth.ts"],
+      "docs": [
+        "docs/google-oauth-setup.md",
+        "docs/existing-supabase-setup.md"
+      ]
+    }
+  ]
+}
