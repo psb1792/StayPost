@@ -8,7 +8,8 @@ function App() {
   return (
     <Router>
       <Routes>
-        <Route path="/" element={<MainInteraction />} />
+        <Route path="/" element={<StyleExtractionDemo />} />
+        <Route path="/canvas-generator" element={<MainInteraction />} />
         <Route path="/style-extraction" element={<StyleExtractionDemo />} />
         <Route path="/user-intent-analysis" element={<UserIntentAnalysisDemo />} />
       </Routes>

@@ -65,22 +65,28 @@ export const MainInteraction: React.FC = () => {
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100 p-4">
       {/* 네비게이션 헤더 */}
-      <div className="w-full max-w-2xl mb-4">
+      <div className="w-full max-w-4xl mb-4">
         <nav className="bg-white rounded-lg shadow-md p-4">
           <div className="flex justify-between items-center">
-            <h1 className="text-xl font-bold text-gray-800">AI Canvas 생성기</h1>
-            <div className="flex space-x-2">
+            <div className="flex items-center space-x-4">
+              <h1 className="text-xl font-bold text-gray-800">🏠 StayPost AI</h1>
+              <span className="text-sm text-gray-500">|</span>
+              <span className="text-sm text-gray-600">Canvas Generator</span>
+            </div>
+            <div className="flex space-x-3">
               <Link 
                 to="/style-extraction" 
-                className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors duration-300"
+                className="px-4 py-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-lg hover:from-purple-600 hover:to-pink-600 transition-all duration-300 flex items-center space-x-2"
               >
-                Style Extraction Demo
+                <span>🏠</span>
+                <span>펜션 스타일 분석</span>
               </Link>
               <Link 
                 to="/user-intent-analysis" 
-                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors duration-300"
+                className="px-4 py-2 bg-gradient-to-r from-green-500 to-blue-500 text-white rounded-lg hover:from-green-600 hover:to-blue-600 transition-all duration-300 flex items-center space-x-2"
               >
-                User Intent Analysis Demo
+                <span>🧠</span>
+                <span>사용자 의도 분석</span>
               </Link>
             </div>
           </div>
