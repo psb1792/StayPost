@@ -2,36 +2,21 @@ import React, { useState, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { AIChainService } from '../ai/services/ai-chain-service';
 import { uploadMultipleImagesToSupabase, UploadedImage } from '../lib/supabase';
+import { AnalysisProgress } from '../components/AnalysisProgress';
+import { StepResult } from '../components/StepResult';
+import { AnalysisStep, PensionAnalysis, ExtractionLog } from '../types/AnalysisTypes';
+
+interface UploadedFile {
+  file: File;
+  preview: string;
+  uploadedImage?: UploadedImage;
+}
 
 interface DesignPrinciple {
   principle: string;
   description: string;
   application: string;
   visualExample: string;
-}
-
-interface PensionAnalysis {
-  core_style: string[];
-  key_elements: string[];
-  target_persona: string[];
-  recommended_activities: string[];
-  unsuitable_persona: string[];
-  confidence_score: number;
-  pablo_memo: string;
-}
-
-interface ExtractionLog {
-  timestamp: string;
-  imageUrls: string[];
-  analysis: PensionAnalysis;
-  rawAIResponse: string;
-  extractionMethod: string;
-}
-
-interface UploadedFile {
-  file: File;
-  preview: string;
-  uploadedImage?: UploadedImage; // Supabase 업로드 결과
 }
 
 export default function StyleExtractionDemo() {
@@ -46,6 +31,63 @@ export default function StyleExtractionDemo() {
   });
   const [aiResponse, setAiResponse] = useState('');
   const [isCorrecting, setIsCorrecting] = useState(false);
+
+  // 단계별 분석 상태 관리
+  const [analysisSteps, setAnalysisSteps] = useState<AnalysisStep[]>([  
+    {
+      id: 1,
+      title: "관찰 및 1차 분석",
+      description: "이미지에서 기본적인 디자인 요소들을 관찰하고 파악합니다",
+      status: 'pending'
+    },
+    {
+      id: 2,
+      title: "자기 검증 및 근거 도출",
+      description: "관찰 결과를 바탕으로 '왜?'라는 질문에 답하며 검증합니다",
+      status: 'pending'
+    },
+    {
+      id: 3,
+      title: "최종 결과물 생성",
+      description: "검증된 통찰력을 바탕으로 최종 분석 결과를 생성합니다",
+      status: 'pending'
+    }
+  ]);
+  const [currentStep, setCurrentStep] = useState(1);
+  const [expandedSteps, setExpandedSteps] = useState<Set<number>>(new Set());
+
+  // 단계 상태 업데이트 함수
+  const updateStepStatus = (stepId: number, status: 'pending' | 'processing' | 'completed' | 'error', result?: any, error?: string) => {
+    setAnalysisSteps(prev => prev.map(step => 
+      step.id === stepId 
+        ? { ...step, status, result, error }
+        : step
+    ));
+  };
+
+  // 현재 단계 설정 함수
+  const setCurrentStepAndUpdate = (stepId: number) => {
+    setCurrentStep(stepId);
+    // 이전 단계들을 completed로 업데이트
+    setAnalysisSteps(prev => prev.map(step => 
+      step.id < stepId 
+        ? { ...step, status: 'completed' as const }
+        : step.id === stepId
+        ? { ...step, status: 'processing' as const }
+        : step
+    ));
+  };
+
+  // 모든 단계 초기화 함수
+  const resetAllSteps = () => {
+    setAnalysisSteps(prev => prev.map(step => ({
+      ...step,
+      status: 'pending' as const,
+      result: undefined,
+      error: undefined
+    })));
+    setCurrentStep(1);
+  };
 
   const handleImageUrlChange = (index: number, value: string) => {
     const newUrls = [...imageUrls];
@@ -116,6 +158,102 @@ export default function StyleExtractionDemo() {
     setUploadedFiles(prev => prev.filter((_, i) => i !== index));
   };
 
+  // 단계별 분석 함수들
+  const analyzeStep1 = async (allImageUrls: string[]) => {
+    console.log('1단계: 관찰 및 1차 분석 시작...');
+    updateStepStatus(1, 'processing');
+    
+    try {
+      const response = await fetch('http://localhost:8000/api/analyze-pension-style-step1', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          image_urls: allImageUrls
+        })
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        updateStepStatus(1, 'completed', result);
+        setCurrentStepAndUpdate(2);
+        return result;
+      } else {
+        const errorData = await response.json();
+        updateStepStatus(1, 'error', undefined, errorData.detail || '1단계 분석 실패');
+        throw new Error(errorData.detail || '1단계 분석 실패');
+      }
+    } catch (error) {
+      updateStepStatus(1, 'error', undefined, error instanceof Error ? error.message : '1단계 분석 중 오류 발생');
+      throw error;
+    }
+  };
+
+  const analyzeStep2 = async (allImageUrls: string[], step1Result: any) => {
+    console.log('2단계: 자기 검증 및 근거 도출 시작...');
+    updateStepStatus(2, 'processing');
+    
+    try {
+      const response = await fetch('http://localhost:8000/api/analyze-pension-style-step2', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          image_urls: allImageUrls,
+          step1_result: step1Result
+        })
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        updateStepStatus(2, 'completed', result);
+        setCurrentStepAndUpdate(3);
+        return result;
+      } else {
+        const errorData = await response.json();
+        updateStepStatus(2, 'error', undefined, errorData.detail || '2단계 분석 실패');
+        throw new Error(errorData.detail || '2단계 분석 실패');
+      }
+    } catch (error) {
+      updateStepStatus(2, 'error', undefined, error instanceof Error ? error.message : '2단계 분석 중 오류 발생');
+      throw error;
+    }
+  };
+
+  const analyzeStep3 = async (allImageUrls: string[], step1Result: any, step2Result: any) => {
+    console.log('3단계: 최종 결과물 생성 시작...');
+    updateStepStatus(3, 'processing');
+    
+    try {
+      const response = await fetch('http://localhost:8000/api/analyze-pension-style-step3', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          image_urls: allImageUrls,
+          step1_result: step1Result,
+          step2_result: step2Result
+        })
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        updateStepStatus(3, 'completed', result);
+        return result;
+      } else {
+        const errorData = await response.json();
+        updateStepStatus(3, 'error', undefined, errorData.detail || '3단계 분석 실패');
+        throw new Error(errorData.detail || '3단계 분석 실패');
+      }
+    } catch (error) {
+      updateStepStatus(3, 'error', undefined, error instanceof Error ? error.message : '3단계 분석 중 오류 발생');
+      throw error;
+    }
+  };
+
   const analyzePensionStyle = async () => {
     // 빈 URL 필터링
     const validUrls = imageUrls.filter(url => url.trim() !== '');
@@ -138,6 +276,7 @@ export default function StyleExtractionDemo() {
     }
 
     setLoading(true);
+    resetAllSteps(); // 모든 단계 초기화
 
     try {
       // 1단계: 업로드된 파일들을 Supabase에 업로드
@@ -184,7 +323,7 @@ export default function StyleExtractionDemo() {
         console.log('업로드된 이미지 URL들:', uploadedImageUrls);
       }
 
-      // 2단계: 모든 이미지 URL을 합쳐서 AI 분석 요청
+      // 2단계: 모든 이미지 URL을 합쳐서 단계별 AI 분석 요청
       const allImageUrls = [...uploadedImageUrls, ...validUrls];
       
       if (allImageUrls.length === 0) {
@@ -192,41 +331,30 @@ export default function StyleExtractionDemo() {
         return;
       }
 
-      console.log('AI 분석 요청 시작...');
+      console.log('단계별 AI 분석 요청 시작...');
       console.log('전송할 이미지 URL들:', allImageUrls);
 
-      const response = await fetch('http://localhost:8000/api/analyze-pension-style', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          image_urls: allImageUrls
-        })
-      });
+      // 단계별 분석 실행
+      const step1Result = await analyzeStep1(allImageUrls);
+      const step2Result = await analyzeStep2(allImageUrls, step1Result);
+      const step3Result = await analyzeStep3(allImageUrls, step1Result, step2Result);
 
-      if (response.ok) {
-        const result = await response.json();
-        setAnalysisResult(result);
-        setAiResponse(JSON.stringify(result, null, 2));
-        
-        // 로그에 저장
-        const newLog: ExtractionLog = {
-          timestamp: new Date().toISOString(),
-          imageUrls: allImageUrls,
-          analysis: result,
-          rawAIResponse: JSON.stringify(result),
-          extractionMethod: '펜션 스타일 분석 (Supabase 업로드)'
-        };
-        
-        setExtractionLogs(prev => [newLog, ...prev]);
-        
-        console.log('펜션 스타일 분석 완료!');
-      } else {
-        const errorData = await response.json();
-        console.error('API 응답 에러:', errorData);
-        alert('펜션 스타일 분석에 실패했습니다: ' + (errorData.detail || '알 수 없는 오류'));
-      }
+      // 최종 결과 설정
+      setAnalysisResult(step3Result);
+      setAiResponse(JSON.stringify(step3Result, null, 2));
+      
+      // 로그에 저장
+      const newLog: ExtractionLog = {
+        timestamp: new Date().toISOString(),
+        imageUrls: allImageUrls,
+        analysis: step3Result,
+        rawAIResponse: JSON.stringify(step3Result),
+        extractionMethod: '펜션 스타일 분석 (단계별 분석)'
+      };
+      
+      setExtractionLogs(prev => [newLog, ...prev]);
+      
+      console.log('펜션 스타일 분석 완료!');
     } catch (error) {
       console.error('펜션 스타일 분석 오류:', error);
       alert('펜션 스타일 분석 중 오류가 발생했습니다: ' + (error instanceof Error ? error.message : '알 수 없는 오류'));
@@ -371,6 +499,19 @@ ${analysisResult.pablo_memo}
     setAnalysisResult(null);
     setAiResponse('');
     setExtractionLogs([]);
+    resetAllSteps(); // 단계 상태도 초기화
+  };
+
+  const toggleStep = (stepId: number) => {
+    setExpandedSteps(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(stepId)) {
+        newSet.delete(stepId);
+      } else {
+        newSet.add(stepId);
+      }
+      return newSet;
+    });
   };
 
   return (
@@ -595,7 +736,11 @@ https://example.com/pension3.jpg"
 
         {/* 펜션 스타일 분석 */}
         <div className={`rounded-lg shadow-md p-6 mb-6 ${apiKey ? 'bg-white' : 'bg-gray-100'}`}>
-          <h2 className="text-xl font-semibold mb-4">2단계: AI 펜션 스타일 분석</h2>
+          <h2 className="text-xl font-semibold mb-4">3단계: AI 펜션 스타일 분석</h2>
+          
+          {/* 단계별 진행 상황 표시 */}
+          <AnalysisProgress steps={analysisSteps} currentStep={currentStep} />
+          
           <button
             onClick={analyzePensionStyle}
             disabled={(uploadedFiles.length === 0 && imageUrls.filter(url => url.trim() !== '').length === 0) || !apiKey || loading}
@@ -617,6 +762,25 @@ https://example.com/pension3.jpg"
             </p>
           )}
         </div>
+
+        {/* 단계별 결과 표시 */}
+        {(analysisSteps.some(step => step.status !== 'pending') || loading) && (
+          <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+            <h2 className="text-xl font-semibold mb-4">단계별 분석 결과</h2>
+            
+            <div className="space-y-4">
+              {analysisSteps.map(step => (
+                <StepResult 
+                  key={step.id}
+                  step={step}
+                  result={step.result}
+                  isExpanded={expandedSteps.has(step.id)}
+                  onToggle={() => toggleStep(step.id)}
+                />
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* 분석 결과 */}
         {analysisResult && (

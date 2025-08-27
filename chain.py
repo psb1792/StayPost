@@ -392,3 +392,63 @@ def analyze_pension_style_with_retry(image_urls, max_retries=1):
         import traceback
         logger.error(f"fallback_error 상세: {traceback.format_exc()}")
         return None, "Complete failure - unable to generate any response"
+
+
+async def call_openai_api(prompt: str, image_urls: list) -> str:
+    """
+    OpenAI API를 호출하여 이미지 분석을 수행하는 함수
+    
+    Args:
+        prompt (str): 분석 프롬프트
+        image_urls (list): 분석할 이미지 URL 리스트
+        
+    Returns:
+        str: AI 응답 텍스트 또는 None
+    """
+    try:
+        from openai import AsyncOpenAI
+        
+        # OpenAI 클라이언트 초기화
+        client = AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+        
+        # 이미지 URL들을 OpenAI 형식으로 변환
+        image_contents = []
+        for url in image_urls:
+            image_contents.append({
+                "type": "image_url",
+                "image_url": {"url": url}
+            })
+        
+        # 메시지 구성
+        messages = [
+            {
+                "role": "user",
+                "content": [
+                    {"type": "text", "text": prompt},
+                    *image_contents
+                ]
+            }
+        ]
+        
+        logger.info(f"OpenAI API 호출 시작: {len(image_urls)}개 이미지")
+        
+        # OpenAI API 호출
+        response = await client.chat.completions.create(
+            model="gpt-4o",
+            messages=messages,
+            max_tokens=4000,
+            temperature=0.7
+        )
+        
+        # 응답 추출
+        if response.choices and len(response.choices) > 0:
+            content = response.choices[0].message.content
+            logger.info(f"OpenAI API 응답 성공: {len(content)} 문자")
+            return content
+        else:
+            logger.error("OpenAI API 응답이 비어있습니다")
+            return None
+            
+    except Exception as e:
+        logger.error(f"OpenAI API 호출 중 오류: {str(e)}")
+        return None
